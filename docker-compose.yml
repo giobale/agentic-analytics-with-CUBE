@@ -1,0 +1,35 @@
+version: '3.8'
+
+services:
+  mysql:
+    build:
+      context: ./mysql-container
+      dockerfile: docker/Dockerfile
+    container_name: mysql-csv-loader
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-rootpassword}
+      MYSQL_DATABASE: ${MYSQL_DATABASE:-csvdb}
+      MYSQL_USER: ${MYSQL_USER:-csvuser}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:-csvpassword}
+    ports:
+      - "${MYSQL_PORT:-3306}:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+      - ./db-tables:/var/lib/mysql-files/csv-data:rw
+      - ./mysql-container/config/mysql.cnf:/etc/mysql/conf.d/custom.cnf:rw
+    networks:
+      - mysql-network
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      timeout: 10s
+      retries: 5
+      interval: 30s
+      start_period: 40s
+
+volumes:
+  mysql_data:
+    driver: local
+
+networks:
+  mysql-network:
+    driver: bridge
