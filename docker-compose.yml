@@ -7,16 +7,17 @@ services:
       dockerfile: docker/Dockerfile
     container_name: mysql-csv-loader
     environment:
-      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-rootpassword}
-      MYSQL_DATABASE: ${MYSQL_DATABASE:-csvdb}
-      MYSQL_USER: ${MYSQL_USER:-csvuser}
-      MYSQL_PASSWORD: ${MYSQL_PASSWORD:-csvpassword}
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-amatriciana}
+      MYSQL_DATABASE: ${MYSQL_DATABASE:-ticketshopdb}
+      MYSQL_USER: ${MYSQL_USER:-organiser}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:-amatriciana}
     ports:
       - "${MYSQL_PORT:-3306}:3306"
     volumes:
       - mysql_data:/var/lib/mysql
       - ./db-tables:/var/lib/mysql-files/csv-data:rw
       - ./mysql-container/config/mysql.cnf:/etc/mysql/conf.d/custom.cnf:rw
+      - ./mysql-container/init:/docker-entrypoint-initdb.d:ro
     networks:
       - mysql-network
     healthcheck:
@@ -25,6 +26,38 @@ services:
       retries: 5
       interval: 30s
       start_period: 40s
+
+  cube:
+    build:
+      context: ./cube-core
+      dockerfile: Dockerfile
+    container_name: cube-semantic-layer
+    environment:
+      CUBEJS_DB_TYPE: mysql
+      CUBEJS_DB_HOST: mysql
+      CUBEJS_DB_PORT: 3306
+      CUBEJS_DB_NAME: ${MYSQL_DATABASE:-ticketshopdb}
+      CUBEJS_DB_USER: ${MYSQL_USER:-organiser}
+      CUBEJS_DB_PASS: ${MYSQL_PASSWORD:-amatriciana}
+      CUBEJS_DEV_MODE: true
+      CUBEJS_API_SECRET: ${CUBEJS_API_SECRET:-baubeach}
+      CUBEJS_WEB_SOCKETS: true
+    ports:
+      - "${CUBE_PORT:-4000}:4000"
+    volumes:
+      - ./cube-core/model:/cube/conf/model:rw
+      - ./cube-core/config:/cube/conf/config:rw
+    networks:
+      - mysql-network
+    depends_on:
+      mysql:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:4000/readyz"]
+      timeout: 10s
+      retries: 5
+      interval: 30s
+      start_period: 60s
 
 volumes:
   mysql_data:

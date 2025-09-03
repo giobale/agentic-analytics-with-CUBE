@@ -1,0 +1,19 @@
+{
+  "name": "cube-semantic-layer",
+  "version": "1.0.0",
+  "description": "Cube.js Semantic Layer for Ticket Shop Data",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js",
+    "dev": "cubejs-dev-server"
+  },
+  "dependencies": {
+    "@cubejs-backend/server": "^0.36.0",
+    "@cubejs-backend/mysql-driver": "^0.36.0",
+    "@cubejs-backend/query-orchestrator": "^0.36.0",
+    "mysql2": "^3.6.0"
+  },
+  "engines": {
+    "node": ">=14.0.0"
+  }
+}

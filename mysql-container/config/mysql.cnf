@@ -1,4 +1,7 @@
 [mysqld]
+# Authentication compatibility
+default_authentication_plugin = mysql_native_password
+
 # Enable LOAD DATA INFILE for CSV imports
 local_infile = 1
 secure_file_priv = /var/lib/mysql-files

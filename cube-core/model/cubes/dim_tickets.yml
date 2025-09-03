@@ -1,0 +1,77 @@
+cubes:
+  - name: DimTickets
+    sql_table: ticketshopdb.`DIM_Tickets`
+    data_source: default
+    
+    joins: []
+    
+    dimensions:
+      - name: guid
+        sql: guid
+        type: string
+        primary_key: true
+        
+      - name: event_id
+        sql: event_id
+        type: string
+        
+      - name: company_id
+        sql: company_id
+        type: string
+        
+      - name: name
+        sql: name
+        type: string
+        
+      - name: description
+        sql: description
+        type: string
+        
+      - name: currency
+        sql: currency
+        type: string
+        
+      - name: is_soldout
+        sql: is_soldout
+        type: boolean
+        
+      - name: created_at
+        sql: created_at
+        type: time
+        
+      - name: available_from
+        sql: available_from
+        type: time
+        
+      - name: available_until
+        sql: available_until
+        type: time
+        
+    measures:
+      - name: count
+        type: count
+        title: Ticket Count
+        
+      - name: min_price_total
+        sql: min_price
+        type: sum
+        title: Total Min Price
+        
+      - name: available_stock_total
+        sql: available_stock
+        type: sum
+        title: Available Stock
+        
+      - name: sold_count_total
+        sql: sold_count
+        type: sum
+        title: Sold Count
+        
+      - name: avg_min_price
+        sql: min_price
+        type: avg
+        title: Average Min Price
+
+    pre_aggregations:
+      # Pre-aggregation definitions go here.
+      # Learn more in the documentation: https://cube.dev/docs/caching/pre-aggregations/getting-started

@@ -1,0 +1,41 @@
+cubes:
+  - name: DimShops
+    sql_table: ticketshopdb.`DIM_Shops`
+    data_source: default
+
+    joins: []
+
+    dimensions:
+      - name: guid
+        sql: guid
+        type: string
+        primary_key: true
+        
+      - name: company_id
+        sql: company_id
+        type: string
+        
+      - name: name
+        sql: name
+        type: string
+        
+      - name: description
+        sql: description
+        type: string
+        
+      - name: created_at
+        sql: created_at
+        type: time
+        
+      - name: inserted_at
+        sql: inserted_at
+        type: time
+
+    measures:
+      - name: count
+        type: count
+        title: Shop Count
+
+    pre_aggregations:
+      # Pre-aggregation definitions go here.
+      # Learn more in the documentation: https://cube.dev/docs/caching/pre-aggregations/getting-started

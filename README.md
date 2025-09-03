@@ -1,6 +1,15 @@
-# MySQL CSV Loader Container
+# CUBE Semantic Layer POC
 
-This project provides a MySQL container that automatically loads CSV files as database tables. The CSV filenames become the table names in the database.
+This Proof of Concept demonstrates a natural language querying system built on top of a MySQL database using CUBE's semantic layer. Users can interact with their data through a conversational chat interface that leverages an LLM to translate natural language questions into appropriate CUBE API calls.
+
+**Key Workflow:**
+1. User enters a natural language question in the chat interface
+2. The LLM receives the question along with the semantic layer context  
+3. LLM generates the appropriate CUBE API query
+4. System executes the query against the CUBE instance
+5. Results are exported as CSV and the file path is returned to the user
+
+This project provides a complete data stack with MySQL container that automatically loads CSV files as database tables, and a CUBE semantic layer for analytics and business intelligence.
 
 ## Project Structure
 
@@ -8,204 +17,221 @@ This project provides a MySQL container that automatically loads CSV files as da
 ├── docker-compose.yml          # Docker Compose configuration
 ├── .env                       # Environment variables
 ├── README.md                  # This file
+├── test-api.sh                # Quick API authentication tester
+├── extract-jwt-token.sh       # JWT token extraction script
 ├── db-tables/                 # Place your CSV files here
-├── mysql-container/
+├── mysql-container/            # MySQL container setup
 │   ├── docker/
 │   │   └── Dockerfile        # MySQL container configuration
 │   ├── scripts/
-│   │   └── 01-load-csv-tables.sh  # CSV import script
+│   │   └── csv-import-service.py  # CSV import service
 │   └── config/
 │       └── mysql.cnf         # MySQL configuration
+├── cube-core/                 # Cube.js semantic layer
+│   ├── Dockerfile            # Cube container configuration
+│   ├── index.js             # Main application entry point
+│   ├── cube.js              # Root configuration file
+│   ├── test.sh              # Internal testing script
+│   ├── package.json         # Node.js dependencies
+│   ├── config/
+│   │   └── cube.js          # Cube configuration file
+│   └── model/
+│       ├── cubes/           # YAML cube schema definitions
+│       │   ├── dim_events.yml
+│       │   ├── dim_shops.yml  
+│       │   ├── dim_tickets.yml
+│       │   └── fact_orders.yml
+│       └── views/           # View definitions
+└── cube-api-client/          # Python API test application
+    ├── cube_api_test.py     # Main test application
+    ├── requirements.txt     # Python dependencies
+    ├── results/             # CSV output files (auto-created)
+    └── README.md           # Application documentation
 ```
 
 ## Prerequisites
 
-- Docker
-- Docker Compose
+- Docker and Docker Compose
+- Python 3.8+ (for test application)
+- curl (for API testing)
 
-## Setup Instructions
 
-### 1. Place Your CSV Files
-
-Place your CSV files in the `db-tables/` directory. The filename (without .csv extension) will become the table name.
-
-Example:
-- `db-tables/users.csv` → table name: `users`
-- `db-tables/products.csv` → table name: `products`
-- `db-tables/order-history.csv` → table name: `order_history`
-
-**CSV File Requirements:**
-- First row must contain column headers
-- Use comma-separated values
-- Text fields with commas are automatically handled (no quotes needed)
-- UTF-8 encoding recommended
-
-### 2. Configure Environment (Optional)
-
-Edit the `.env` file to customize database credentials:
+## Basic Commands
 
 ```bash
-MYSQL_ROOT_PASSWORD=your_secure_password
-MYSQL_DATABASE=your_database_name
-MYSQL_USER=your_username
-MYSQL_PASSWORD=your_password
-MYSQL_PORT=3306
-```
-
-### 3. Start the Container
-
-```bash
-# Build and start the container
+# Start the environment
 docker-compose up --build -d
 
-# View logs to monitor the import process
-docker-compose logs -f mysql
-```
+# Check container status
+docker-compose ps
 
-### 4. Verify the Import
-
-```bash
-# Connect to MySQL
-docker-compose exec mysql mysql -u root -p
-
-# Or connect using the configured user
-docker-compose exec mysql mysql -u csvuser -p
-
-#List the databases 
-SHOW DATABASES;
-
-USE your_database_name
-
-# List tables
-SHOW TABLES;
-
-# Check table structure
-DESCRIBE your_table_name;
-
-# Query data
-SELECT * FROM your_table_name LIMIT 10;
-```
-
-## Usage Examples
-
-### Connect from Host Machine
-
-```bash
-# Using MySQL client
-mysql -h 127.0.0.1 -P 3306 -u csvuser -p csvdb
-
-# Using Docker exec
-docker-compose exec mysql mysql -u csvuser -p csvdb
-```
-
-### Sample CSV Format
-
-**users.csv:**
-```csv
-id,name,email,created_at,description
-1,John Doe,john@example.com,2024-01-15,Software Engineer, Team Lead
-2,Jane Smith,jane@example.com,2024-01-16,Product Manager, UX Designer
-```
-
-This will create a `users` table with columns: `id`, `name`, `email`, `created_at`, `description`. Note how the description field contains commas without requiring quotes.
-
-## Data Type Mapping
-
-The system automatically maps CSV data to appropriate MySQL types:
-
-| CSV Data | MySQL Type |
-|----------|------------|
-| Integer numbers | INT/BIGINT |
-| Decimal numbers | DECIMAL(10,2) |
-| Boolean (true/false) | BOOLEAN |
-| Date/DateTime | DATETIME |
-| Text | VARCHAR(n) or TEXT |
-
-## Management Commands
-
-```bash
-# Stop the container
+# Stop containers
 docker-compose down
 
-# Stop and remove volumes (deletes all data)
-docker-compose down -v
-
-# Restart after adding new CSV files
-docker-compose restart mysql
-
-# View container logs
+# View logs
+docker-compose logs cube
 docker-compose logs mysql
-
-# Access MySQL shell
-docker-compose exec mysql bash
 ```
 
-## Adding New CSV Files
+## Quick Start Guide
 
-To add new CSV files after the container is running:
+### 1. Environment Setup
 
-1. Place new CSV files in `db-tables/` directory
-2. Restart the container: `docker-compose restart mysql`
-3. The new tables will be created automatically
+**Prerequisites:**
+- Docker and Docker Compose
+- Python 3.8+ (for the test application)
+- curl (for API testing)
 
-## Troubleshooting
-
-### CSV Import Issues
-
-1. **Check file encoding**: Ensure CSV files are UTF-8 encoded
-2. **Verify file permissions**: CSV files should be readable
-3. **Check logs**: `docker-compose logs mysql` for detailed error messages
-
-### Common Issues
-
-- **Permission denied**: Ensure CSV files in `db-tables/` are readable
-- **Table not created**: Check CSV format and headers
-- **Connection refused**: Wait for container health check to pass
-- **Data truncated**: Large text fields may need manual type adjustment
-
-### Monitoring Import Progress
-
+**Start the Environment:**
 ```bash
-# Watch real-time logs
-docker-compose logs -f mysql | grep -E "(Processing|Successfully|Error)"
-```
+# Clone/setup the project
+git clone <repository-url>
+cd PoC-V1-CUBE-Semantyc-Layer
 
-## Security Notes
+# Place CSV files in db-tables/ directory (sample files already included)
+ls db-tables/  # Should show: DIM_Events.csv, DIM_Shops.csv, DIM_Tickets.csv, FACT_Orders.csv
 
-- Change default passwords in production
-- The `.env` file contains sensitive information - don't commit it to version control
-- Consider using Docker secrets for production deployments
-
-## Container Health
-
-The container includes a health check that verifies MySQL is ready:
-
-```bash
-# Check container health
-docker-compose ps
-```
-
-## Customization
-
-### Custom MySQL Configuration
-
-Edit `mysql-container/config/mysql.cnf` to customize MySQL settings.
-
-### Custom Import Logic
-
-Modify `mysql-container/scripts/01-load-csv-tables.sh` to customize the import process.
-
-## Network Access
-
-The MySQL container is accessible on:
-- **Host**: `localhost:3306` (or custom port from .env)
-- **Container network**: `mysql-csv-loader:3306`
-
-## Data Persistence
-
-Database data persists in a Docker volume named `mysql_data`. To reset all data:
-
-```bash
-docker-compose down -v
+# Start containers with build
 docker-compose up --build -d
+
+# Wait for health checks to pass (usually takes 1-2 minutes)
+docker-compose ps
+
+# Both containers should show "healthy" status
 ```
+
+### 2. Test Database Connection
+
+```bash
+# Test MySQL connectivity from host
+mysql -h 127.0.0.1 -P 3306 -u organiser -pamatriciana -e "USE ticketshopdb; SHOW TABLES;"
+
+# Expected output: 4 tables (DIM_Events, DIM_Shops, DIM_Tickets, FACT_Orders)
+
+# Alternative: Test from inside container
+docker-compose exec mysql mysql -u organiser -pamatriciana -e "USE ticketshopdb; SHOW TABLES;"
+```
+
+### 3. Test CUBE Instance
+
+```bash
+# Test CUBE health endpoint
+curl http://localhost:4000/readyz
+# Expected output: {"health":"HEALTH"}
+
+# Test CUBE development playground access
+open http://localhost:4000
+# Should open CUBE development interface in browser
+```
+
+### 4. Test Data Source Connection
+
+```bash
+# Run comprehensive connectivity test
+docker-compose exec cube /cube/conf/test.sh
+
+# Expected output should show:
+# ✅ MySQL connection successful
+# ✅ Cube health check passed  
+# ✅ JWT authentication successful!
+# 📊 Found XX cubes in the semantic layer
+```
+
+### 5. Test CUBE Models via API
+
+```bash
+# Get JWT token and test meta API
+JWT_TOKEN=$(docker-compose logs cube | grep -o 'eyJ[A-Za-z0-9._-]*' | tail -1)
+echo "Using JWT token: ${JWT_TOKEN:0:20}..."
+
+# Test CUBE meta endpoint with authentication
+curl -H "Authorization: Bearer $JWT_TOKEN" \
+     http://localhost:4000/cubejs-api/v1/meta
+
+# Expected: JSON response with cube definitions for DimEvents, DimShops, DimTickets, FactOrders
+```
+
+### 6. Run Sample Python Application
+
+**Navigate to the application directory:**
+```bash
+cd cube-api-client
+```
+
+**Installation:**
+```bash
+# Option 1: Use virtual environment (recommended)
+python3 -m venv venv
+source venv/bin/activate
+pip install -r requirements.txt
+
+# Option 2: Install manually with user flag
+pip install --user requests pandas
+```
+
+**Run the Application:**
+```bash
+# Execute the test application
+python3 cube_api_test.py
+
+# Expected output:
+# 🧪 CUBE API Test Application
+# ========================================
+# ✅ Successfully connected to CUBE API
+# ✅ Available cubes: DimEvents, DimShops, DimTickets, FactOrders
+# 
+# 📊 Testing Simple Count Queries
+# ------------------------------
+# 🔍 Executing: Events Count
+# ✅ Query executed successfully, 1 rows returned
+#    Result: {'DimEvents.count': '4'}
+#
+# 🔍 Executing: Orders Count and Total Value  
+# ✅ Query executed successfully, 1 rows returned
+#    Result: {'FactOrders.count': '7840', 'FactOrders.totalOrderValue': '2856420.00'}
+#
+# 💾 Saving 5 query results to CSV files
+# ----------------------------------------
+# ✅ Results saved to: results/Events_Count_20240903_155412.csv
+# ✅ Results saved to: results/Orders_Count_and_Total_Value_20240903_155412.csv
+# ✨ Test completed successfully!
+# 📁 All CSV files saved to: ./results/ directory
+```
+
+**What the Application Tests:**
+1. **API Connectivity** - Verifies CUBE server is reachable
+2. **Authentication** - Tests JWT/API secret authentication  
+3. **Metadata Access** - Retrieves available cubes and their schema
+4. **Query Execution** - Runs various count and aggregation queries:
+   - Events count
+   - Shops count  
+   - Tickets count
+   - Orders count and total revenue
+   - Orders grouped by payment method
+5. **CSV Export** - Saves all query results to timestamped CSV files
+
+**Troubleshooting Python App:**
+```bash
+# If connection fails, check containers are running
+docker-compose ps
+
+# If authentication fails, verify API secret in .env file
+grep CUBEJS_API_SECRET .env
+
+# For detailed error info, modify the script to add:
+# import logging
+# logging.basicConfig(level=logging.DEBUG)
+
+# Test API manually first (will likely fail, use the Python app instead)
+curl -H "Authorization: Bearer baubeach" http://localhost:4000/cubejs-api/v1/meta
+```
+
+**Note**: The Python app automatically retrieves JWT tokens from container logs for proper authentication.
+
+## CUBE Models
+
+The project includes comprehensive YAML models:
+- `dim_events.yml` - Events with capacity and sales metrics
+- `dim_shops.yml` - Shop information and relationships  
+- `dim_tickets.yml` - Ticket pricing and availability
+- `fact_orders.yml` - Order transactions and revenue data

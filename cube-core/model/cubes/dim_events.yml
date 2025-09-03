@@ -1,0 +1,71 @@
+cubes:
+  - name: DimEvents
+    sql_table: ticketshopdb.`DIM_Events`
+    data_source: default
+    
+    joins: []
+    
+    dimensions:
+      - name: guid
+        sql: guid
+        type: string
+        primary_key: true
+        
+      - name: company_id
+        sql: company_id
+        type: string
+        
+      - name: name
+        sql: name
+        type: string
+        
+      - name: description
+        sql: description
+        type: string
+        
+      - name: dash_category
+        sql: dash_category
+        type: string
+        
+      - name: status
+        sql: status
+        type: string
+        
+      - name: locale
+        sql: locale
+        type: string
+        
+      - name: currency
+        sql: currency
+        type: string
+        
+      - name: start_date
+        sql: start_date
+        type: time
+        
+      - name: end_date
+        sql: end_date
+        type: time
+        
+      - name: created_at
+        sql: created_at
+        type: time
+        
+    measures:
+      - name: count
+        type: count
+        title: Event Count
+        
+      - name: total_capacity
+        sql: total_capacity
+        type: sum
+        title: Total Capacity
+        
+      - name: avg_sold_percentage
+        sql: sold_percentage
+        type: avg
+        title: Average Sold Percentage
+
+    pre_aggregations:
+      # Pre-aggregation definitions go here.
+      # Learn more in the documentation: https://cube.dev/docs/caching/pre-aggregations/getting-started
