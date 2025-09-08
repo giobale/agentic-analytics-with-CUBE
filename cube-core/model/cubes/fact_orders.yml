@@ -3,7 +3,18 @@ cubes:
     sql_table: ticketshopdb.`FACT_Orders`
     data_source: default
     
-    joins: []
+    joins:
+      - name: DimEvents
+        sql: "{CUBE}.event_id = {DimEvents}.guid"
+        relationship: many_to_one
+        
+      - name: DimTickets
+        sql: "{CUBE}.ticket_id = {DimTickets}.guid"
+        relationship: many_to_one
+        
+      - name: DimShops
+        sql: "{CUBE}.shop_id = {DimShops}.guid"
+        relationship: many_to_one
     
     dimensions:
       - name: order_id
