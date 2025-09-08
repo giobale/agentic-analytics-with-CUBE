@@ -206,6 +206,19 @@ def main():
                 "measures": ["FactOrders.count"],
                 "dimensions": ["DimEvents.name"]
             }
+        },
+        {
+            "name": "Event Revenue and Sales Metrics",
+            "query": {
+                "measures": [
+                    "EventPerformanceOverview.total_order_value",
+                    "EventPerformanceOverview.total_tickets_sold"
+                ],
+                "dimensions": [
+                    "EventPerformanceOverview.name",
+                    "EventPerformanceOverview.start_date"
+                ]
+            }
         }
     ]
     

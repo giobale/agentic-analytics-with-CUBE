@@ -65,5 +65,9 @@ build/
 secrets/
 .secrets
 
-# venvor other virtual environment directories
-venv/
+# cube-api-client specific directories
+cube-api-client/venv
+cube-api-client/reaults
+
+# ignore db-tables CSV files for security reasons
+db-tables/*.csv

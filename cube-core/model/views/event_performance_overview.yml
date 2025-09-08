@@ -2,30 +2,32 @@ views:
   - name: EventPerformanceOverview
     description: "Event sales performance view"
     
-    includes:
-      - FactOrders:
-          includes: "*"  # Include all from FactOrders
-      - DimEvents:
-          includes:
-            - name
-            - start_date
-            - status
-            - dash_category
-          excludes:
-            - count        # Conflicts with FactOrders.count
-            - company_id   # Conflicts with FactOrders.company_id
-            - currency     # Conflicts with FactOrders.currency
-            - created_at   # Conflicts with FactOrders.created_at
-            - description  # Conflicts with DimTickets.description
-      - DimTickets:
-          includes:
-            - sold_count_total
-            - avg_min_price
-          excludes:
-            - count        # Conflicts with FactOrders.count
-            - name         # Conflicts with DimEvents.name
-            - company_id   # Conflicts with FactOrders.company_id
-            - currency     # Conflicts with FactOrders.currency
-            - created_at   # Conflicts with FactOrders.created_at
-            - description  # Conflicts with DimEvents.description
-            - event_id     # Conflicts with FactOrders.event_id
+    cubes:
+      - join_path: FactOrders
+        includes: "*"
+        
+      - join_path: FactOrders.DimEvents
+        includes:
+          - name
+          - start_date
+          - status
+          - dash_category
+        excludes:
+          - count
+          - company_id
+          - currency
+          - created_at
+          - description
+          
+      - join_path: FactOrders.DimTickets
+        includes:
+          - sold_count_total
+          - avg_min_price
+        excludes:
+          - count
+          - name
+          - company_id
+          - currency
+          - created_at
+          - description
+          - event_id
