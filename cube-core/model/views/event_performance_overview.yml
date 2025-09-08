@@ -1,0 +1,31 @@
+views:
+  - name: EventPerformanceOverview
+    description: "Comprehensive view of event sales performance and capacity utilization"
+    
+    cubes:
+      - join_path: FactOrders
+        prefix: orders
+      - join_path: FactOrders.DimEvents
+        prefix: events
+      - join_path: FactOrders.DimTickets
+        prefix: tickets
+    
+    dimensions:
+      - events.name
+      - events.start_date
+      - events.status
+      - events.dash_category
+      - events.location
+      
+    measures:
+      - orders.total_order_value
+      - orders.total_tickets_sold
+      - orders.count
+      - events.total_capacity
+      - tickets.available_stock_total
+      - name: capacity_utilization_rate
+        type: number
+        sql: "({orders.total_tickets_sold} / NULLIF({events.total_capacity}, 0)) * 100"
+      - name: revenue_per_capacity
+        type: number
+        sql: "{orders.total_order_value} / NULLIF({events.total_capacity}, 0)"

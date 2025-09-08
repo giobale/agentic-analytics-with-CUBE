@@ -190,14 +190,14 @@ def main():
         {
             "name": "Orders Count and Total Value",
             "query": {
-                "measures": ["FactOrders.count", "FactOrders.totalOrderValue"]
+                "measures": ["FactOrders.count", "FactOrders.total_order_value"]
             }
         },
         {
             "name": "Orders by Payment Method",
             "query": {
                 "measures": ["FactOrders.count"],
-                "dimensions": ["FactOrders.paymentMethod"]
+                "dimensions": ["FactOrders.payment_method"]
             }
         }
     ]

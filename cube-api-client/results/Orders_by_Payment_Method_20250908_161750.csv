@@ -1,0 +1,8 @@
+FactOrders.payment_method,FactOrders.count
+iDeal,5086
+Creditcard,2011
+PayPal,556
+Bancontact,111
+American Express,42
+Klarna.,20
+Sofort,14

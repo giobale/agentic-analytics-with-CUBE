@@ -64,3 +64,6 @@ build/
 *.p12
 secrets/
 .secrets
+
+# venvor other virtual environment directories
+venv/
