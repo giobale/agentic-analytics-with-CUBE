@@ -231,7 +231,7 @@ curl -H "Authorization: Bearer baubeach" http://localhost:4000/cubejs-api/v1/met
 ## CUBE Models
 
 The project includes comprehensive YAML models:
-- `dim_events.yml` - Events with capacity and sales metrics
-- `dim_shops.yml` - Shop information and relationships  
-- `dim_tickets.yml` - Ticket pricing and availability
-- `fact_orders.yml` - Order transactions and revenue data
+- `dim_events.yml` - Events informaiton (id,company_id, name, capacity, location, start_date etc.)
+- `dim_shops.yml` - Shop information (id, company_id, name, created_at etc.)
+- `dim_tickets.yml` - Ticket information (id, company_id, event_id, name, price, status, capacity etc. )
+- `fact_orders.yml` - Ticket ordder transactions data ( order_id, ticket_id, email, shop_id, event_id, company_id, ticket_count, currency, order_value etc. )

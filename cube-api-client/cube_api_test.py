@@ -199,6 +199,55 @@ def main():
                 "measures": ["FactOrders.count"],
                 "dimensions": ["FactOrders.payment_method"]
             }
+        },
+        {
+        "name": "Event Revenue and Capacity Utilization by Event",
+        "query": {
+            "measures": [
+                "EventPerformanceOverview.total_order_value",
+                "EventPerformanceOverview.total_tickets_sold", 
+                "EventPerformanceOverview.total_capacity",
+                "EventPerformanceOverview.capacity_utilization_rate"
+                ],
+            "dimensions": [
+                "EventPerformanceOverview.events_name",
+                "EventPerformanceOverview.events_start_date"
+                ]
+            }
+        },
+        {
+            "name": "Performance Summary by Event Category",
+            "query": {
+                "measures": [
+                    "EventPerformanceOverview.count",
+                    "EventPerformanceOverview.total_order_value",
+                    "EventPerformanceOverview.total_tickets_sold",
+                    "EventPerformanceOverview.revenue_per_capacity"
+                ],
+                "dimensions": [
+                    "EventPerformanceOverview.events_dash_category"
+                ]
+            }
+        },
+        {
+            "name": "Top Performing Events by Revenue with Stock Status",
+            "query": {
+                "measures": [
+                    "EventPerformanceOverview.total_order_value",
+                    "EventPerformanceOverview.total_tickets_sold",
+                    "EventPerformanceOverview.available_stock_total",
+                    "EventPerformanceOverview.capacity_utilization_rate"
+                ],
+                "dimensions": [
+                    "EventPerformanceOverview.events_name",
+                    "EventPerformanceOverview.events_status",
+                    "EventPerformanceOverview.events_location"
+                ],
+                "order": {
+                    "EventPerformanceOverview.total_order_value": "desc"
+                },
+                "limit": 10
+            }
         }
     ]
     
