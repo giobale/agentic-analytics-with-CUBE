@@ -1,0 +1,28 @@
+# BUSINESS CONTEXT: {business_name}
+
+## Business Overview
+{business_description}
+
+## Domain: {domain}
+
+## Business Entities
+
+{entities_section}
+
+## Key Metrics
+
+{metrics_section}
+
+## Common Business Questions
+
+{common_questions_section}
+
+## Data Relationships
+
+The event management system follows these key relationships:
+- Events have many Orders and Tickets
+- Orders belong to Events, Customers and Tickets
+- Customers have many Orders
+- Tickets belong to Events
+
+Understanding these relationships helps in constructing meaningful queries that provide business insights.

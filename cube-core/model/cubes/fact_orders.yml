@@ -2,6 +2,8 @@ cubes:
   - name: FactOrders
     sql_table: ticketshopdb.`FACT_Orders`
     data_source: default
+    title: Orders Table
+    description: Table contaning one row per order_id and ticket_id combination, along with quantity and order value and other dimensional attributes which are needed to link an order to dimensions metadata.
     
     joins:
       - name: DimEvents
@@ -21,67 +23,92 @@ cubes:
         sql: order_id
         type: string
         primary_key: true
+        title: Order ID
+        description: Unique identifier for each order.
         
       - name: email
         sql: email
         type: string
+        title: Visitor (or attendee) Email
+        description: Email address of the visitor (or attendee) who placed the order.
         
       - name: ticket_id
         sql: ticket_id
         type: string
+        title: Ticket ID
+        description: Unique identifier for each ticket associated with the order.
         
       - name: company_id
         sql: company_id
         type: string
+        title: Company ID
+        description: Identifier for the company associated with the order.
         
       - name: shop_id
         sql: shop_id
         type: string
+        title: Shop ID
+        description: Identifier for the company shop where the order was placed.
         
       - name: event_id
         sql: event_id
         type: string
+        title: Event ID
+        description: Identifier for the event associated with the order.
         
       - name: payment_method
         sql: payment_method
         type: string
+        title: Payment Method
+        description: Payment method used for the order (e.g., credit card, PayPal).
         
       - name: currency
         sql: currency
         type: string
+        title: Currency
+        description: Currency in which the order was placed (e.g., USD, EUR).
         
       - name: refund_protect
         sql: refund_protect
         type: boolean
+        title: Refund Protection
+        description: Indicates whether refund protection was purchased for the order.
         
       - name: order_date
         sql: order_date
         type: time
+        title: Order Date
+        description: Date and time when the order was placed.
         
     measures:
       - name: count
         type: count
         title: Order Count
+        description: Total number of orders.
         
       - name: total_order_value
         sql: order_value
         type: sum
         title: Total Order Value
+        description: Sum of the order values for all orders, so the total revenue generated from orders.
         
       - name: avg_order_value
         sql: order_value
         type: avg
         title: Average Order Value
+        description: Average value of the orders, so the mean order revenue.
         
       - name: total_tickets_sold
         sql: ticket_count
         type: sum
         title: Total Tickets Sold
+        description: Total number of tickets sold.
         
       - name: avg_tickets_per_order
         sql: ticket_count
         type: avg
         title: Average Tickets per Order
+        description: Average number of tickets sold per order.
 
     pre_aggregations:
       # Pre-aggregation definitions go here.

@@ -1,0 +1,91 @@
+ambiguous_queries:
+  - ambiguous_query: "Show me performance"
+    issues: ["ambiguous_metrics", "missing_time_range", "unclear_grouping"]
+    clarification_response:
+      type: "clarification_needed"
+      message: "I need clarification to provide accurate results:"
+      questions:
+        - "What type of performance are you interested in? (revenue, attendance, sales)"
+        - "What time period should I analyze?"
+        - "How would you like the results grouped?"
+      suggestions:
+        - "Show event revenue performance for last month"
+        - "Show ticket sales performance by event name"
+
+  - ambiguous_query: "What are the numbers?"
+    issues: ["ambiguous_metrics", "missing_time_range", "vague_entity"]
+    clarification_response:
+      type: "clarification_needed"
+      message: "I need more specific information:"
+      questions:
+        - "Which metrics are you looking for?"
+        - "For what time period?"
+        - "What level of detail do you need?"
+      suggestions:
+        - "Show total revenue for all events"
+        - "Show monthly ticket sales numbers"
+
+  - ambiguous_query: "Show events"
+    issues: ["missing_metrics", "unclear_grouping"]
+    clarification_response:
+      type: "clarification_needed"
+      message: "I need to know what information about events you want:"
+      questions:
+        - "What data about events do you want to see?"
+        - "Are you looking for revenue, ticket sales, or other metrics?"
+        - "How should the events be organized?"
+      suggestions:
+        - "Show event names with total revenue"
+        - "Show events grouped by status with ticket sales"
+
+  - ambiguous_query: "Give me sales data"
+    issues: ["missing_time_range", "unclear_grouping"]
+    clarification_response:
+      type: "clarification_needed"
+      message: "I can help with sales data. Please specify:"
+      questions:
+        - "What time period are you interested in?"
+        - "Do you want ticket sales or revenue data?"
+        - "How should the data be grouped?"
+      suggestions:
+        - "Show monthly ticket sales for this year"
+        - "Show total revenue by event for last quarter"
+
+  - ambiguous_query: "Top events"
+    issues: ["ambiguous_metrics", "missing_time_range"]
+    clarification_response:
+      type: "clarification_needed"
+      message: "I need to know what makes events 'top':"
+      questions:
+        - "Top by what metric? (revenue, ticket sales, attendance)"
+        - "For what time period?"
+        - "How many top events do you want to see?"
+      suggestions:
+        - "Show top 10 events by revenue for this year"
+        - "Show top 5 events by ticket sales for last month"
+
+  - ambiguous_query: "Compare events"
+    issues: ["missing_metrics", "unclear_comparison", "missing_time_range"]
+    clarification_response:
+      type: "clarification_needed"
+      message: "I need details about the comparison:"
+      questions:
+        - "What metrics should I compare?"
+        - "Which specific events do you want to compare?"
+        - "For what time period?"
+      suggestions:
+        - "Compare revenue between Event A and Event B"
+        - "Compare all events by ticket sales for last quarter"
+
+  - ambiguous_query: "Monthly data"
+    issues: ["ambiguous_metrics", "vague_entity"]
+    clarification_response:
+      type: "clarification_needed"
+      message: "I need to know what monthly data you want:"
+      questions:
+        - "What metrics do you want to see monthly?"
+        - "For which time range?"
+        - "Do you want data for all events or specific ones?"
+      suggestions:
+        - "Show monthly revenue trends for this year"
+        - "Show monthly ticket sales for all events"

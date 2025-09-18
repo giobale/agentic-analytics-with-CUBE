@@ -1,0 +1,50 @@
+ambiguity_triggers:
+  - type: "missing_time_range"
+    keywords: ["show", "get", "find", "display", "list"]
+    missing_elements: ["time", "date", "period", "when", "last", "this", "next"]
+    clarification: "What time period are you interested in?"
+
+  - type: "unclear_grouping"
+    keywords: ["by", "group", "break down", "categorize", "organize"]
+    missing_elements: ["dimension", "category", "breakdown"]
+    clarification: "How would you like the data grouped or categorized?"
+
+  - type: "ambiguous_metrics"
+    keywords: ["performance", "numbers", "data", "metrics", "stats", "analytics"]
+    missing_elements: ["specific_measure", "revenue", "sales", "tickets", "orders"]
+    clarification: "Which specific metrics are you looking for?"
+
+  - type: "vague_entity"
+    keywords: ["events", "customers", "orders", "tickets"]
+    missing_elements: ["specific_attributes", "conditions", "filters"]
+    clarification: "What specific information about {entity} do you need?"
+
+confidence_scoring:
+  has_specific_measure: 0.3
+  has_time_context: 0.2
+  has_grouping_context: 0.2
+  matches_known_patterns: 0.3
+
+minimum_confidence: 0.6
+
+clarification_templates:
+  general: "I need more information to provide accurate results. Could you specify:"
+  time_missing: "What time period should I analyze?"
+  metric_missing: "Which metrics are you interested in?"
+  grouping_missing: "How would you like the results organized?"
+  entity_missing: "What specific information are you looking for?"
+
+response_strategies:
+  low_confidence:
+    action: "request_clarification"
+    include_suggestions: true
+    max_questions: 3
+
+  medium_confidence:
+    action: "provide_best_guess"
+    include_assumptions: true
+    request_confirmation: true
+
+  high_confidence:
+    action: "execute_query"
+    include_metadata: true

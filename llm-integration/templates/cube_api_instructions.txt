@@ -1,0 +1,110 @@
+# CUBE API QUERY STRUCTURE
+
+The CUBE API accepts queries in the following JSON format. You must generate queries that conform exactly to this structure.
+
+## Basic Query Structure
+
+```json
+{
+  "measures": ["ViewName.measure_name"],
+  "dimensions": ["ViewName.dimension_name"],
+  "filters": [optional],
+  "order": {optional},
+  "limit": optional,
+  "timeDimensions": [optional]
+}
+```
+
+## Required Fields
+
+- **measures**: Array of measure names (e.g., revenue, count, sum)
+- **dimensions**: Array of dimension names (e.g., event name, date, category)
+
+## Optional Fields
+
+- **filters**: Array of filter conditions
+- **order**: Object specifying sort order
+- **limit**: Number to limit results
+- **timeDimensions**: Array of time-based filters
+
+## Field Naming Convention
+
+Always use fully qualified names in the format: `ViewName.field_name`
+
+Examples:
+- `EventPerformanceOverview.total_order_value`
+- `EventPerformanceOverview.name`
+- `EventPerformanceOverview.start_date`
+
+## Filter Syntax
+
+```json
+"filters": [
+  {
+    "member": "ViewName.field_name",
+    "operator": "equals|contains|gt|lt|gte|lte",
+    "values": ["value1", "value2"]
+  }
+]
+```
+
+## Order Syntax
+
+```json
+"order": {
+  "ViewName.field_name": "asc|desc"
+}
+```
+
+## Time Dimensions
+
+```json
+"timeDimensions": [
+  {
+    "dimension": "ViewName.date_field",
+    "granularity": "day|week|month|quarter|year",
+    "dateRange": ["2024-01-01", "2024-12-31"]
+  }
+]
+```
+
+## Common Patterns
+
+### Revenue by Event
+```json
+{
+  "measures": ["EventPerformanceOverview.total_order_value"],
+  "dimensions": ["EventPerformanceOverview.name"]
+}
+```
+
+### Top 10 Events by Revenue
+```json
+{
+  "measures": ["EventPerformanceOverview.total_order_value"],
+  "dimensions": ["EventPerformanceOverview.name"],
+  "order": {"EventPerformanceOverview.total_order_value": "desc"},
+  "limit": 10
+}
+```
+
+### Monthly Revenue Trend
+```json
+{
+  "measures": ["EventPerformanceOverview.total_order_value"],
+  "timeDimensions": [
+    {
+      "dimension": "EventPerformanceOverview.start_date",
+      "granularity": "month"
+    }
+  ]
+}
+```
+
+## Validation Rules
+
+1. **Measures are required** - every query must have at least one measure
+2. **Use qualified names** - always prefix with view name
+3. **Valid operators** - stick to supported filter operators
+4. **Proper JSON** - ensure valid JSON syntax
+5. **Logical combinations** - ensure measures and dimensions make sense together

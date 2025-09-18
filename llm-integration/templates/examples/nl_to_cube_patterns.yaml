@@ -1,0 +1,88 @@
+patterns:
+  temporal:
+    - phrase: "last month"
+      cube_filter:
+        timeDimensions:
+          - dimension: "EventPerformanceOverview.start_date"
+            dateRange: "Last month"
+
+    - phrase: "this year"
+      cube_filter:
+        timeDimensions:
+          - dimension: "EventPerformanceOverview.start_date"
+            dateRange: "This year"
+
+    - phrase: "monthly"
+      cube_filter:
+        timeDimensions:
+          - dimension: "EventPerformanceOverview.start_date"
+            granularity: "month"
+
+    - phrase: "quarterly"
+      cube_filter:
+        timeDimensions:
+          - dimension: "EventPerformanceOverview.start_date"
+            granularity: "quarter"
+
+  aggregation:
+    - phrase: "total revenue"
+      cube_measure: "EventPerformanceOverview.total_order_value"
+
+    - phrase: "number of tickets sold"
+      cube_measure: "EventPerformanceOverview.total_tickets_sold"
+
+    - phrase: "average order value"
+      cube_measure: "EventPerformanceOverview.average_order_value"
+
+    - phrase: "ticket sales"
+      cube_measure: "EventPerformanceOverview.total_tickets_sold"
+
+  grouping:
+    - phrase: "by event"
+      cube_dimension: "EventPerformanceOverview.name"
+
+    - phrase: "by month"
+      cube_dimension: "EventPerformanceOverview.start_date"
+      granularity: "month"
+
+    - phrase: "by status"
+      cube_dimension: "EventPerformanceOverview.event_status"
+
+    - phrase: "by date"
+      cube_dimension: "EventPerformanceOverview.start_date"
+
+  filtering:
+    - phrase: "top performing"
+      cube_filter:
+        order: {"EventPerformanceOverview.total_order_value": "desc"}
+        limit: 10
+
+    - phrase: "highest revenue"
+      cube_filter:
+        order: {"EventPerformanceOverview.total_order_value": "desc"}
+
+    - phrase: "most tickets"
+      cube_filter:
+        order: {"EventPerformanceOverview.total_tickets_sold": "desc"}
+
+  comparison:
+    - phrase: "greater than"
+      cube_operator: "gt"
+
+    - phrase: "less than"
+      cube_operator: "lt"
+
+    - phrase: "equal to"
+      cube_operator: "equals"
+
+    - phrase: "contains"
+      cube_operator: "contains"
+
+  entities:
+    - phrase: "events"
+      primary_dimension: "EventPerformanceOverview.name"
+      common_measures: ["total_order_value", "total_tickets_sold"]
+
+    - phrase: "performance"
+      suggested_measures: ["total_order_value", "total_tickets_sold", "average_order_value"]
+      suggested_dimensions: ["name", "event_status"]

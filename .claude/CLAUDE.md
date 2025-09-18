@@ -23,7 +23,7 @@ This Proof of Concept (POC) demonstrates a natural language querying system buil
                  │       │
          ┌─────────────────┐
          │   LLM Service   │
-         │   (Claude API)  │
+         │   (OpenAI API)  │
          └─────────────────┘
 ```
 
@@ -79,11 +79,11 @@ CUBEJS_DEV_MODE=true
 **Technology Stack:**
 - Backend: Node.js/Express or Python/FastAPI
 - Frontend: React/Vue.js or simple HTML/JS
-- LLM Integration: Claude API (Anthropic)
+- LLM Integration: OpenAI API
 
 **Key Features:**
 - Chat interface for natural language input
-- Integration with Claude API for query generation
+- Integration with OpenAI API for query generation
 - CUBE API client for executing queries
 - CSV export functionality
 - File management system
@@ -97,13 +97,13 @@ CUBEJS_DEV_MODE=true
 
 ### LLM Integration Workflow
 1. **Context Preparation:**
-   - Load semantic layer YAML files
+   - Load semantic layer views YML files from the container directory
    - Prepare system prompt with CUBE schema information
    - Include example queries and expected outputs
 
 2. **Query Processing:**
    - Receive user's natural language question
-   - Send to Claude API with semantic layer context
+   - Send to OpenAI API with semantic layer context
    - Parse LLM response to extract CUBE query parameters
 
 3. **CUBE API Interaction:**
@@ -138,7 +138,7 @@ CUBEJS_DEV_MODE=true
 
 ### Environment Variables Needed:
 ```
-# Claude API
+# OpenAI API
 ANTHROPIC_API_KEY=your-api-key
 
 # Database
