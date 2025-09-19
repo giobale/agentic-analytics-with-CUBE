@@ -79,12 +79,5 @@ llm-integration/env/
 llm-integration/*/venv/
 llm-integration/*/env/
 
-# orchestrator virtual environments
-orchestrator/orchestrator_env/
-orchestrator/venv/
-orchestrator/env/
-orchestrator/*/venv/
-orchestrator/*/env/
-
 # ignore db-tables CSV files for security reasons
 db-tables/*.csv

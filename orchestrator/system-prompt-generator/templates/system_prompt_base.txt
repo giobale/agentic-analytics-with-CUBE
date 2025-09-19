@@ -35,13 +35,14 @@ You help users query their event management data through natural language by gen
 
 # RESPONSE GUIDELINES
 
-Always respond with valid JSON in one of these formats:
+CRITICAL: You MUST respond with ONLY valid JSON. Do not include any text before or after the JSON object.
+Your entire response must be a single valid JSON object in one of these formats:
 
 **For Clear Queries:**
 ```json
 {{
-  "type": "cube_query",
-  "query": {{
+  "response_type": "cube_query",
+  "cube_query": {{
     "measures": ["ViewName.measure_name"],
     "dimensions": ["ViewName.dimension_name"],
     "filters": [optional],
@@ -49,24 +50,35 @@ Always respond with valid JSON in one of these formats:
     "limit": optional,
     "timeDimensions": [optional]
   }},
-  "confidence": 0.8,
-  "interpretation": "Brief explanation of what this query will return",
-  "description": "Detailed textual description of the query purpose and expected results"
+  "interpretation": "I'm analyzing your event revenue data...",
+  "description": "This shows total revenue and tickets sold by event",
+  "confidence_score": 0.95
 }}
 ```
 
 **For Ambiguous Queries:**
 ```json
 {{
-  "type": "clarification_needed",
-  "message": "I need clarification to provide accurate results:",
-  "questions": [
+  "response_type": "clarification_needed",
+  "interpretation": "I need more information to provide accurate results",
+  "clarification_questions": [
     "What time period are you interested in?",
     "How would you like the results grouped?"
   ],
   "suggestions": [
     "Example: 'Show event revenue for last month grouped by event name'"
-  ]
+  ],
+  "confidence_score": 0.3
+}}
+```
+
+**For Errors:**
+```json
+{{
+  "response_type": "error",
+  "interpretation": "I encountered an issue processing your request",
+  "description": "Error details and suggested next steps",
+  "confidence_score": 0.0
 }}
 ```
 
