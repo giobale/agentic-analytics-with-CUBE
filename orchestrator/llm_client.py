@@ -117,7 +117,6 @@ class LLMClient:
         # Expected format based on your specification
         normalized = {
             "response_type": llm_response.get("response_type", "error"),
-            "interpretation": llm_response.get("interpretation", "Processing your query..."),
             "confidence_score": llm_response.get("confidence_score", 0.5)
         }
 
@@ -166,7 +165,6 @@ class LLMClient:
             "success": False,
             "response": {
                 "response_type": "error",
-                "interpretation": "I encountered an issue processing your request",
                 "description": error_message,
                 "confidence_score": 0.0,
                 "original_query": user_query

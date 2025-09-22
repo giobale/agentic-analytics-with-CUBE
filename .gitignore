@@ -88,3 +88,6 @@ orchestrator/*/env/
 
 # ignore db-tables CSV files for security reasons
 db-tables/*.csv
+
+# Ignore all files in directories named 'results'
+**/results/

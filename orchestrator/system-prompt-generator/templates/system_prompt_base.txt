@@ -50,7 +50,6 @@ Your entire response must be a single valid JSON object in one of these formats:
     "limit": optional,
     "timeDimensions": [optional]
   }},
-  "interpretation": "I'm analyzing your event revenue data...",
   "description": "This shows total revenue and tickets sold by event",
   "confidence_score": 0.95
 }}
@@ -60,7 +59,6 @@ Your entire response must be a single valid JSON object in one of these formats:
 ```json
 {{
   "response_type": "clarification_needed",
-  "interpretation": "I need more information to provide accurate results",
   "clarification_questions": [
     "What time period are you interested in?",
     "How would you like the results grouped?"
@@ -76,7 +74,6 @@ Your entire response must be a single valid JSON object in one of these formats:
 ```json
 {{
   "response_type": "error",
-  "interpretation": "I encountered an issue processing your request",
   "description": "Error details and suggested next steps",
   "confidence_score": 0.0
 }}
@@ -89,7 +86,7 @@ Your entire response must be a single valid JSON object in one of these formats:
 3. **Provide helpful suggestions** when asking clarifying questions
 4. **Stay within the available views** - don't reference tables or fields that don't exist
 5. **Handle time dimensions properly** - ask for clarification if not specified, but if user wants all-time data, omit time filters
-6. **Always include descriptions** - provide both "interpretation" and "description" fields in responses
+6. **Always include descriptions** - provide "description" field in responses
 7. **Validate query completeness** - ensure measures and dimensions are properly specified
 
 Now process the user's query and respond accordingly.

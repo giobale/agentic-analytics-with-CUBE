@@ -9,7 +9,6 @@ queries:
         - "EventPerformanceOverview.name"
         - "EventPerformanceOverview.start_date"
     description: "Basic revenue and sales metrics grouped by event"
-    interpretation: "This query returns total revenue and ticket sales for each event, showing event names and start dates"
     confidence: 0.9
 
   - name: "Top Performing Events"

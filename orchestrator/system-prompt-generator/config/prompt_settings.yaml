@@ -26,7 +26,7 @@ formatting:
 output_format:
   success_response:
     type: "cube_query"
-    required_fields: ["measures", "dimensions", "interpretation", "description"]
+    required_fields: ["measures", "dimensions", "description"]
     optional_fields: ["filters", "order", "limit", "timeDimensions"]
 
   clarification_response:
@@ -35,5 +35,4 @@ output_format:
     optional_fields: ["suggestions", "related_examples"]
 
 response_fields:
-  interpretation: "Brief explanation of what the query will return"
   description: "Detailed textual description of the query purpose and expected results"
