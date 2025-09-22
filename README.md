@@ -125,6 +125,20 @@ python3 cube_api_test.py
 
 ### 5. Test the Orchestrator (Natural Language Processing)
 
+#### Container Method (Recommended)
+```bash
+# Orchestrator starts automatically with docker-compose
+docker-compose logs orchestrator
+
+# Test health
+curl http://localhost:8080/health
+curl http://localhost:8080/readyz
+
+# Manual system prompt update
+docker exec query-orchestrator ./scripts/update-system-prompt.sh info
+```
+
+#### Python Method (Development)
 ```bash
 cd orchestrator
 
@@ -143,20 +157,51 @@ python3 tests/test_orchestrator_interactive.py
 # View container logs
 docker-compose logs cube
 docker-compose logs mysql
+docker-compose logs orchestrator
 
 # Stop services
 docker-compose down
 
 # Rebuild and restart
 docker-compose up --build -d
+
+# Orchestrator management
+docker exec query-orchestrator ./scripts/update-system-prompt.sh
 ```
 
 ## Testing Natural Language Queries
 
-With the orchestrator running, you can test queries like:
-- "Show me total revenue for each event"
-- "Which events sold the most tickets?"
-- "What's the average order value by shop?"
-- "Show monthly revenue trends"
+### Container Method
+```bash
+# Orchestrator provides health endpoints
+curl http://localhost:8080/health
+curl http://localhost:8080/system-prompt-info
 
-The orchestrator will convert these into appropriate CUBE API calls and return formatted results.
+# Future: REST API for queries
+# curl -X POST http://localhost:8080/query -d '{"query": "Show total revenue by event"}'
+```
+
+### Python Method
+```python
+from orchestrator import QueryOrchestrator
+
+orchestrator = QueryOrchestrator()
+orchestrator.initialize()
+
+# Test sample queries
+queries = [
+    "Show me total revenue for each event",
+    "Which events sold the most tickets?",
+    "What's the average order value by shop?",
+    "Show monthly revenue trends"
+]
+
+for query in queries:
+    result = orchestrator.process_query(query)
+    print(f"Query: {query}")
+    print(f"Success: {result['success']}")
+    if result['success']:
+        print(f"CSV: {result['csv_filename']}")
+```
+
+The orchestrator converts natural language into CUBE API calls with intelligent caching and conversation memory.

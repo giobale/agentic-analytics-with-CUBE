@@ -93,12 +93,6 @@ CUBEJS_DEV_MODE=true
 - File download interface for generated CSV files
 - User authentication (if required)
 
-**API Endpoints:**
-- `POST /chat` - Send user query to orchestrator
-- `GET /conversation/:id` - Retrieve conversation history
-- `GET /download/:filename` - Download generated files
-- `GET /health` - Chat app health check
-
 ### 4. Orchestrator Service
 **Purpose:** Intelligent query coordination service that transforms natural language into actionable data queries
 
@@ -151,40 +145,9 @@ CUBEJS_DEV_MODE=true
 ### Services Required:
 1. **mysql-db:** MySQL 8.0 database
 2. **cube-core:** CUBE semantic layer
-3. **chat-app:** Combined frontend and backend
-4. **nginx:** (Optional) Reverse proxy for production
-
-### Network Configuration:
-- Internal network for service communication
-- Exposed ports: 3000 (Chat App), 4000 (CUBE API), 4001 (CUBE Dev)
-
-### Volume Mounts:
-- `./data/csv:/docker-entrypoint-initdb.d/data`
-- `./cube-project:/cube/conf`
-- `./exports:/app/exports`
-
-## Development Requirements
-
-### Environment Variables Needed:
-```
-# OpenAI API
-ANTHROPIC_API_KEY=your-api-key
-
-# Database
-MYSQL_ROOT_PASSWORD=root-password
-MYSQL_DATABASE=poc_data
-MYSQL_USER=cube_user
-MYSQL_PASSWORD=cube_password
-
-# CUBE
-CUBEJS_API_SECRET=your-cube-secret
-CUBEJS_DEV_MODE=true
-```
-
-### Sample Data Requirements:
-- At least 2-3 CSV files with relational data
-- Clear column headers and consistent data types
-- Sample files: `customers.csv`, `orders.csv`, `products.csv`
+3. **orchestrator:** Backend service for query processing and LLM integration
+4. **chat-app:** Frontend application for user interface
+5. **nginx:** (Optional) Reverse proxy for production
 
 ## Success Criteria
 
@@ -192,16 +155,12 @@ CUBEJS_DEV_MODE=true
 - [x] MySQL database with CSV data loading
 - [x] CUBE semantic layer with basic models
 - [x] Chat interface accepting natural language input
-- [x] LLM integration generating CUBE queries
-- [x] CSV export of query results
+- [x] Orchestrator managing, system prompot generation, LLM integration generating and CUBE queries
+- [x] Unit tests per component
 - [x] Local development environment setup
 
-### Example Interactions:
-- "Show me total sales by month"
-- "Which customers have the highest order values?"
-- "What are our top-selling products in the last quarter?"
 
-## Next Steps for Implementation
+## Implementation Steps
 
 1. **Setup Docker Environment:**
    - Create docker-compose.yml
@@ -218,11 +177,18 @@ CUBEJS_DEV_MODE=true
    - Create measures and dimensions
    - Set up views for common queries
 
-4. **Develop Chat Application:**
-   - Build basic UI components
-   - Implement LLM integration
-   - Create CUBE API client
-   - Add file export functionality
+4. **Develop Orchestrator Service:**
+   - Build LLM integration with OpenAI
+   - Create CUBE API client with JWT authentication
+   - Implement conversation management
+   - Add system prompt generation
+   - Set up CSV export functionality
+
+5. **Build Chat Application:**
+   - Develop user interface components
+   - Implement API client for orchestrator communication
+   - Create conversation display and management
+   - Add file download functionality
 
 5. **Testing and Refinement:**
    - Test natural language query accuracy
