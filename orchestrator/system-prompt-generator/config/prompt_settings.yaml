@@ -1,0 +1,38 @@
+max_prompt_length: 4000
+include_examples: true
+include_business_context: true
+include_view_specifications: true
+include_api_instructions: true
+ambiguity_handling: true
+response_format: "structured_json"
+confidence_threshold: 0.7
+max_clarification_questions: 3
+include_metadata: true
+
+prompt_structure:
+  sections:
+    - business_context
+    - view_specifications
+    - api_instructions
+    - examples
+    - ambiguity_handling
+    - user_query
+
+formatting:
+  use_markdown: true
+  include_section_headers: true
+  compact_mode: false
+
+output_format:
+  success_response:
+    type: "cube_query"
+    required_fields: ["measures", "dimensions", "description"]
+    optional_fields: ["filters", "order", "limit", "timeDimensions"]
+
+  clarification_response:
+    type: "clarification_needed"
+    required_fields: ["message", "questions"]
+    optional_fields: ["suggestions", "related_examples"]
+
+response_fields:
+  description: "Detailed textual description of the query purpose and expected results"

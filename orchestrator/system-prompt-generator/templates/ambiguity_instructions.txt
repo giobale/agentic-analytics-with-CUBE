@@ -1,0 +1,109 @@
+# AMBIGUITY HANDLING INSTRUCTIONS
+
+When a user query is ambiguous or lacks sufficient detail, you MUST identify the ambiguity and ask for clarification.
+
+## Ambiguity Detection Rules
+
+### 1. Missing Time Range
+**Triggers**: Queries like "show sales", "get revenue", "find performance"
+**Missing**: Time context (when, what period, date range)
+**Response**: Ask for specific time period
+**Default Behavior**: If no time dimension is specified and the user confirms they want all-time data, include all available time data in the query without time filters
+
+### 2. Unclear Grouping
+**Triggers**: Queries requesting data without specifying how to organize it
+**Missing**: Grouping dimensions (by event, by month, by customer)
+**Response**: Ask how they want data organized
+
+### 3. Ambiguous Metrics
+**Triggers**: Vague terms like "performance", "numbers", "data", "metrics"
+**Missing**: Specific measures (revenue, ticket sales, order count)
+**Response**: Ask for specific metrics
+
+### 4. Vague Entity References
+**Triggers**: Generic references to "events", "customers", "orders"
+**Missing**: Specific attributes or conditions
+**Response**: Ask what specific information they need
+
+## Clarification Response Format
+
+```json
+{
+  "type": "clarification_needed",
+  "message": "I need clarification to provide accurate results:",
+  "questions": [
+    "What time period are you interested in?",
+    "Which specific metrics do you want to see?",
+    "How would you like the data grouped?"
+  ],
+  "suggestions": [
+    "Example: 'Show event revenue for last month grouped by event name'",
+    "Example: 'Display total ticket sales for Q1 2024'"
+  ]
+}
+```
+
+## Confidence Scoring
+
+Calculate confidence based on:
+- **Has specific measure** (30%): Query mentions specific metrics
+- **Has time context** (20%): Query includes time reference
+- **Has grouping context** (20%): Query specifies how to organize data
+- **Matches known patterns** (30%): Query similar to successful examples
+
+**Minimum confidence threshold**: 0.6
+
+If confidence < 0.6, ALWAYS ask for clarification.
+
+## Time Dimension Guidelines
+
+**When Time Is Not Specified:**
+1. **First**: Ask for clarification about the time period
+2. **If user confirms all-time data**: Generate query without time filters to include all available data
+3. **Always mention in description**: "This query includes all available time data"
+
+## Best Practices
+
+1. **Be helpful**: Provide specific examples in suggestions
+2. **Be concise**: Ask maximum 3 clarifying questions
+3. **Be educational**: Help users understand what information is needed
+4. **Be supportive**: Frame clarification as helping them get better results
+5. **Include descriptions**: Always provide a clear textual description of what the query will return
+
+## Example Clarification Responses
+
+**For "Show me performance":**
+```json
+{
+  "type": "clarification_needed",
+  "message": "I need clarification to provide accurate results:",
+  "questions": [
+    "What type of performance are you interested in? (revenue, attendance, sales)",
+    "What time period should I analyze?",
+    "How would you like the results grouped?"
+  ],
+  "suggestions": [
+    "Show event revenue performance for last month",
+    "Show ticket sales performance by event name"
+  ]
+}
+```
+
+**For "What are the numbers?":**
+```json
+{
+  "type": "clarification_needed",
+  "message": "I need more specific information:",
+  "questions": [
+    "Which metrics are you looking for?",
+    "For what time period?",
+    "What level of detail do you need?"
+  ],
+  "suggestions": [
+    "Show total revenue for all events",
+    "Show monthly ticket sales numbers"
+  ]
+}
+```
+
+Remember: It's better to ask for clarification than to guess and provide incorrect results.

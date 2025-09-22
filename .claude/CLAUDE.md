@@ -6,25 +6,30 @@ This Proof of Concept (POC) demonstrates a natural language querying system buil
 
 **Key Workflow:**
 1. User enters a natural language question in the chat interface
-2. The LLM receives the question along with the semantic layer context
-3. LLM generates the appropriate CUBE API query
-4. System executes the query against the CUBE instance
-5. Results are exported as CSV and the file path is returned to the user
+2. The chat app sennds the query to the orchestrator
+3. The LLM receives the question along with the semantic layer and conversation context
+4. LLM generates the appropriate CUBE API query and descriptive text
+5. The orchestrator executes the query against the CUBE instance
+6. Results are encapsulated in a descriptive answer and sent back to the chat applicaiton
 
 ## Architecture Overview
 
 ```
 ┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
-│   Chat App      │────│   CUBE Core     │────│   MySQL DB      │
-│ (Frontend+API)  │    │ (Semantic Layer)│    │ (Data Storage)  │
+│   Chat App      │────│   Orchestrator  │────│   CUBE Instance │
+│ (Frontend+API)  │    │   (Query Mgmt)  │    │ (Data Analytics)│
 └─────────────────┘    └─────────────────┘    └─────────────────┘
-         │                       │
-         └───────┐       ┌───────┘
-                 │       │
-         ┌─────────────────┐
-         │   LLM Service   │
-         │   (Claude API)  │
-         └─────────────────┘
+                                │
+                        ┌─────────────────┐
+                        │   LLM Service   │
+                        │   (OpenAI API)  │
+                        └─────────────────┘
+                                │
+                        ┌─────────────────┐
+                        │ Semantic Layer  │
+                        │ & Context Store │
+                        └─────────────────┘
+
 ```
 
 ## Application Components
@@ -74,48 +79,72 @@ CUBEJS_DEV_MODE=true
 ```
 
 ### 3. Chat Application
-**Purpose:** User interface and orchestration layer
+**Purpose:** User interface for natural language interactions
 
 **Technology Stack:**
 - Backend: Node.js/Express or Python/FastAPI
 - Frontend: React/Vue.js or simple HTML/JS
-- LLM Integration: Claude API (Anthropic)
+- Communication: REST API calls to Orchestrator
 
 **Key Features:**
 - Chat interface for natural language input
-- Integration with Claude API for query generation
-- CUBE API client for executing queries
-- CSV export functionality
-- File management system
+- Session management and conversation history
+- Response formatting and display
+- File download interface for generated CSV files
+- User authentication (if required)
 
 **API Endpoints:**
-- `POST /chat` - Process natural language queries
-- `GET /results/:filename` - Download generated CSV files
-- `GET /health` - System health check
+- `POST /chat` - Send user query to orchestrator
+- `GET /conversation/:id` - Retrieve conversation history
+- `GET /download/:filename` - Download generated files
+- `GET /health` - Chat app health check
+
+### 4. Orchestrator Service
+**Purpose:** Intelligent query coordination service that transforms natural language into actionable data queries
+
+**Technology Stack:**
+- Backend: Python/FastAPI
+- LLM Integration: OpenAI GPT-4 with JSON response format
+- CUBE Integration: JWT-authenticated REST API client
+- File Management: CSV generation and export system
+
+**Workflow Features (in processing order):**
+1. **Context Preparation**: Generates comprehensive system prompts by parsing CUBE view definitions and business configuration
+2. **Conversation Management**: Maintains rolling conversation history (last 6 messages) for context-aware responses
+3. **LLM Query Generation**: Processes natural language with enhanced JSON response parsing and token usage tracking
+4. **Query Validation & Execution**: Authenticates with CUBE via JWT tokens and executes validated queries
+5. **Result Processing**: Formats responses for different types (data results, clarifications, errors) and generates CSV exports
+6. **Response Orchestration**: Coordinates the complete pipeline and maintains conversation state throughout
+
+**Key Capabilities:**
+- Context-aware natural language understanding using semantic layer definitions
+- Multi-format response handling (structured data, clarifications, error messages)
+- Conversation memory with analytics and export functionality
+- Cost monitoring with token usage tracking
+- Comprehensive error handling and query validation
+- Automated CSV export of analytical results
 
 ## Technical Implementation Details
 
-### LLM Integration Workflow
+### Orchestrator Workflow
 1. **Context Preparation:**
-   - Load semantic layer YAML files
+   - Load semantic layer views YML files from the container directory
    - Prepare system prompt with CUBE schema information
    - Include example queries and expected outputs
 
 2. **Query Processing:**
    - Receive user's natural language question
-   - Send to Claude API with semantic layer context
+   - Send to OpenAI API with semantic layer context
    - Parse LLM response to extract CUBE query parameters
 
 3. **CUBE API Interaction:**
    - Execute generated query against CUBE REST API
    - Handle authentication and error responses
-   - Process results into CSV format
+   - Process results and send them back to chat app
 
 ### File Management Strategy
-- Generated CSV files stored in `/app/exports/` directory
+- Generated CSV files from tests stored in `relusts` directories
 - Filename format: `query_results_[timestamp]_[hash].csv`
-- Automatic cleanup of files older than 24 hours
-- Rate limiting to prevent storage abuse
 
 ## Docker Compose Configuration
 
@@ -138,7 +167,7 @@ CUBEJS_DEV_MODE=true
 
 ### Environment Variables Needed:
 ```
-# Claude API
+# OpenAI API
 ANTHROPIC_API_KEY=your-api-key
 
 # Database

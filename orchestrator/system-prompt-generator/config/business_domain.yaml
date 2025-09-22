@@ -1,0 +1,46 @@
+business_name: "Event Management System"
+business_description: "A comprehensive event management platform that tracks events, ticket sales, orders, and visitor interactions."
+domain: "event_management"
+
+entities:
+  - name: "Events"
+    description: "Core entity representing events with details like name, dates, venue, and pricing"
+    key_attributes: ["name", "start_date", "end_date", "venue", "status"]
+    relationships: ["has_many_orders", "has_many_tickets"]
+
+  - name: "Orders"
+    description: "Purchase transactions containing order details, amounts, and visitor information"
+    key_attributes: ["order_value", "quantity", "order_date", "status"]
+    relationships: ["belongs_to_event", "belongs_to_visitor", "belongs_to_ticket"]
+
+  - name: "Visitors"
+    description: "Individuals or organizations purchasing tickets and attending events"
+    key_attributes: ["email"]
+    relationships: ["has_many_orders"]
+
+  - name: "Tickets"
+    description: "Individual tickets sold for events with pricing and category information"
+    key_attributes: ["ticket_type", "price", "quantity_sold", "availability"]
+    relationships: ["belongs_to_event"]
+
+key_metrics:
+  - name: "Total Revenue"
+    description: "Sum of all order values for events"
+    calculation: "SUM(order_value)"
+
+  - name: "Tickets Sold"
+    description: "Total number of tickets sold across all events"
+    calculation: "SUM(quantity)"
+
+  - name: "Event Performance"
+    description: "Revenue and attendance metrics grouped by event"
+    calculation: "Revenue and ticket sales per event"
+
+common_questions:
+  - "Which events are performing best in terms of revenue?"
+  - "How many tickets have been sold for each event?"
+  - "What is the total revenue for a specific time period?"
+  - "Which visitors are the highest spenders?"
+  - "What are the monthly sales trends?"
+  - "Show me event performance overview"
+  - "What are the top performing events?"

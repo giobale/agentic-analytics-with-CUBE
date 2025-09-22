@@ -1,0 +1,66 @@
+queries:
+  - name: "Event Revenue and Sales Metrics"
+    natural_language: "Show me revenue and ticket sales for each event"
+    cube_query:
+      measures:
+        - "EventPerformanceOverview.total_order_value"
+        - "EventPerformanceOverview.total_tickets_sold"
+      dimensions:
+        - "EventPerformanceOverview.name"
+        - "EventPerformanceOverview.start_date"
+    description: "Basic revenue and sales metrics grouped by event"
+    confidence: 0.9
+
+  - name: "Top Performing Events"
+    natural_language: "Which events generated the most revenue?"
+    cube_query:
+      measures: ["EventPerformanceOverview.total_order_value"]
+      dimensions: ["EventPerformanceOverview.name"]
+      order: {"EventPerformanceOverview.total_order_value": "desc"}
+      limit: 10
+    description: "Top 10 events by revenue with sorting and limiting"
+    confidence: 0.85
+
+  - name: "Monthly Revenue Trend"
+    natural_language: "Show monthly revenue trends for this year"
+    cube_query:
+      measures: ["EventPerformanceOverview.total_order_value"]
+      timeDimensions:
+        - dimension: "EventPerformanceOverview.start_date"
+          granularity: "month"
+          dateRange: "This year"
+    description: "Revenue aggregated by month for current year"
+    confidence: 0.8
+
+  - name: "Event Performance Summary"
+    natural_language: "Give me a complete performance overview for all events"
+    cube_query:
+      measures:
+        - "EventPerformanceOverview.total_order_value"
+        - "EventPerformanceOverview.total_tickets_sold"
+        - "EventPerformanceOverview.average_order_value"
+      dimensions:
+        - "EventPerformanceOverview.name"
+        - "EventPerformanceOverview.event_status"
+    description: "Comprehensive performance metrics for all events"
+    confidence: 0.9
+
+  - name: "High Revenue Events Filter"
+    natural_language: "Show events with revenue greater than $10,000"
+    cube_query:
+      measures: ["EventPerformanceOverview.total_order_value"]
+      dimensions: ["EventPerformanceOverview.name"]
+      filters:
+        - member: "EventPerformanceOverview.total_order_value"
+          operator: "gt"
+          values: ["10000"]
+    description: "Events filtered by minimum revenue threshold"
+    confidence: 0.85
+
+  - name: "Ticket Sales by Event Status"
+    natural_language: "How many tickets were sold by event status?"
+    cube_query:
+      measures: ["EventPerformanceOverview.total_tickets_sold"]
+      dimensions: ["EventPerformanceOverview.event_status"]
+    description: "Ticket sales aggregated by event status"
+    confidence: 0.8
