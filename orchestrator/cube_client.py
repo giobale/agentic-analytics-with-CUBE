@@ -4,11 +4,10 @@
 import requests
 import json
 import pandas as pd
-from datetime import datetime
+from datetime import datetime, timedelta
 from typing import Dict, List, Any, Optional
-import subprocess
-import re
 import os
+import jwt
 
 
 class CubeClient:
@@ -180,31 +179,25 @@ class CubeClient:
         return self._validate_query(cube_query)
 
     def _get_jwt_token(self) -> bool:
-        """Retrieve JWT token from CUBE container logs."""
+        """Generate JWT token for CUBE API authentication."""
         try:
-            # Try to get token from container logs
-            result = subprocess.run(
-                ['docker-compose', 'logs', 'cube'],
-                capture_output=True, text=True, check=True
-            )
+            # Generate JWT token with empty payload as recommended by CUBE.js docs
+            # for development environments
+            payload = {
+                'iat': int(datetime.now().timestamp()),
+                'exp': int((datetime.now() + timedelta(days=30)).timestamp())
+            }
 
-            # Look for JWT token pattern in logs
-            jwt_pattern = r'eyJ[A-Za-z0-9._-]*'
-            matches = re.findall(jwt_pattern, result.stdout)
+            self.jwt_token = jwt.encode(payload, self.api_secret, algorithm='HS256')
 
-            if matches:
-                # Get the most recent token
-                self.jwt_token = matches[-1]
+            # Update session headers with JWT token
+            self.session.headers.update({
+                'Authorization': f'Bearer {self.jwt_token}'
+            })
+            return True
 
-                # Update session headers with JWT token
-                self.session.headers.update({
-                    'Authorization': f'Bearer {self.jwt_token}'
-                })
-                return True
-            else:
-                return False
-
-        except Exception:
+        except Exception as e:
+            print(f"Error generating JWT token: {str(e)}")
             return False
 
     def _test_connection(self) -> bool:

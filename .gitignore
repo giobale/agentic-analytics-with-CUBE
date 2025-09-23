@@ -8,7 +8,7 @@
 docker-compose.override.yml
 
 # CLAUDE.md
-.claude/
+/.claude/CLAUDE.md
 
 # Database data
 mysql_data/

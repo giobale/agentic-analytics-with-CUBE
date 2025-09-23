@@ -9,3 +9,9 @@ uvicorn>=0.24.0
 # Additional utility packages
 pandas>=2.0.0
 typing-extensions>=4.8.0
+
+# CORS middleware for frontend integration
+python-multipart>=0.0.6
+
+# JWT token generation for CUBE authentication
+PyJWT>=2.8.0

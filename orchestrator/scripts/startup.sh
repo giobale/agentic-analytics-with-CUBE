@@ -115,47 +115,15 @@ wait_for_dependencies() {
     return 1
 }
 
-# Function to start health check server
-start_health_server() {
-    log "Starting health check server on port 8080..."
+# Function to start API server
+start_api_server() {
+    log "Starting FastAPI server on port 8080..."
 
-    # Create a simple health check server
-    python3 -c "
-from fastapi import FastAPI
-import uvicorn
-import os
-import json
-from datetime import datetime
+    # Start the full API server
+    python3 api_server.py &
 
-app = FastAPI()
-
-@app.get('/health')
-def health_check():
-    return {'status': 'healthy', 'service': 'orchestrator', 'timestamp': datetime.now().isoformat()}
-
-@app.get('/readyz')
-def readiness_check():
-    system_prompt_file = '/app/cache/system_prompt.txt'
-    if os.path.exists(system_prompt_file):
-        return {'status': 'ready', 'system_prompt_cached': True}
-    else:
-        return {'status': 'not_ready', 'system_prompt_cached': False}
-
-@app.get('/system-prompt-info')
-def system_prompt_info():
-    metadata_file = '/app/cache/system_prompt_metadata.json'
-    if os.path.exists(metadata_file):
-        with open(metadata_file, 'r') as f:
-            return json.load(f)
-    else:
-        return {'error': 'System prompt not generated yet'}
-
-if __name__ == '__main__':
-    uvicorn.run(app, host='0.0.0.0', port=8080, log_level='info')
-" &
-
-    HEALTH_SERVER_PID=$!
-    log_success "Health check server started (PID: $HEALTH_SERVER_PID)"
+    API_SERVER_PID=$!
+    log_success "API server started (PID: $API_SERVER_PID)"
 }
 
 # Main startup sequence
@@ -180,8 +148,8 @@ main() {
         fi
     fi
 
-    # Start health check server
-    start_health_server
+    # Start API server
+    start_api_server
 
     log_success "Orchestrator service initialization complete"
     log "Service is now ready to handle requests"
@@ -193,8 +161,8 @@ main() {
 # Handle shutdown gracefully
 cleanup() {
     log "Shutting down orchestrator service..."
-    if [ ! -z "$HEALTH_SERVER_PID" ]; then
-        kill $HEALTH_SERVER_PID 2>/dev/null || true
+    if [ ! -z "$API_SERVER_PID" ]; then
+        kill $API_SERVER_PID 2>/dev/null || true
     fi
     log_success "Orchestrator service stopped"
     exit 0
