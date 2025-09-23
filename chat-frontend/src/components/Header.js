@@ -2,19 +2,22 @@ import React from 'react';
 import styled from 'styled-components';
 
 const colors = {
-  primary: '#1976D2',
+  primary: '#6366F1',      // Modern indigo - professional yet vibrant
+  secondary: '#8B5CF6',    // Purple accent - creative energy
   white: '#FFFFFF',
-  textPrimary: '#333333'
+  textPrimary: '#1F2937',  // Warm dark gray
+  accent: '#F59E0B'        // Amber - represents success/insights
 };
 
 const HeaderContainer = styled.header`
-  background-color: ${colors.primary};
+  background: linear-gradient(135deg, ${colors.primary} 0%, ${colors.secondary} 100%);
   color: ${colors.white};
-  padding: 16px 20px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  padding: 20px 24px;
+  box-shadow: 0 4px 20px rgba(99, 102, 241, 0.15);
   position: sticky;
   top: 0;
   z-index: 100;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
 `;
 
 const HeaderContent = styled.div`
@@ -26,56 +29,80 @@ const HeaderContent = styled.div`
 `;
 
 const Title = styled.h1`
-  font-size: 24px;
-  font-weight: 600;
+  font-size: 28px;
+  font-weight: 700;
   margin: 0;
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 12px;
+  letter-spacing: -0.5px;
+
+  .brand-name {
+    background: linear-gradient(45deg, ${colors.white} 0%, ${colors.accent} 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
 `;
 
 const Subtitle = styled.p`
-  font-size: 14px;
-  margin: 0;
-  opacity: 0.9;
+  font-size: 15px;
+  margin: 4px 0 0 0;
+  opacity: 0.85;
+  font-weight: 400;
+  letter-spacing: 0.2px;
 `;
 
 const Logo = styled.div`
-  width: 32px;
-  height: 32px;
-  background-color: ${colors.white};
-  border-radius: 8px;
+  width: 40px;
+  height: 40px;
+  background: linear-gradient(135deg, ${colors.white} 0%, ${colors.accent} 100%);
+  border-radius: 12px;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 18px;
-  font-weight: bold;
-  color: ${colors.primary};
+  font-size: 20px;
+  box-shadow: 0 4px 12px rgba(255, 255, 255, 0.2);
+  position: relative;
+
+  &::before {
+    content: '';
+    position: absolute;
+    inset: 2px;
+    background: ${colors.primary};
+    border-radius: 10px;
+    z-index: -1;
+  }
 `;
 
 const StatusIndicator = styled.div`
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 10px;
   font-size: 14px;
+  background: rgba(255, 255, 255, 0.1);
+  padding: 8px 16px;
+  border-radius: 20px;
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.2);
 
   .status-dot {
     width: 8px;
     height: 8px;
-    background-color: #7ED321;
+    background-color: #10B981;
     border-radius: 50%;
     animation: pulse 2s infinite;
   }
 
   @keyframes pulse {
     0% {
-      box-shadow: 0 0 0 0 rgba(126, 211, 33, 0.7);
+      box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7);
     }
     70% {
-      box-shadow: 0 0 0 6px rgba(126, 211, 33, 0);
+      box-shadow: 0 0 0 6px rgba(16, 185, 129, 0);
     }
     100% {
-      box-shadow: 0 0 0 0 rgba(126, 211, 33, 0);
+      box-shadow: 0 0 0 0 rgba(16, 185, 129, 0);
     }
   }
 `;
@@ -86,14 +113,14 @@ const Header = () => {
       <HeaderContent>
         <div>
           <Title>
-            <Logo>C</Logo>
-            CUBE Chat
+            <Logo>📊</Logo>
+            <span className="brand-name">Weezagent Analyst</span>
           </Title>
-          <Subtitle>Natural Language Query Interface</Subtitle>
+          <Subtitle>🎯 Smart Event Analytics for Better Decisions</Subtitle>
         </div>
         <StatusIndicator>
           <div className="status-dot"></div>
-          Connected
+          🟢 AI Ready
         </StatusIndicator>
       </HeaderContent>
     </HeaderContainer>
