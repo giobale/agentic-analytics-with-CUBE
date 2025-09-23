@@ -5,7 +5,8 @@ const colors = {
   success: '#7ED321',      // Bright Green - for ALL message bubbles
   white: '#FFFFFF',        // White - for text inside bubbles
   textSecondary: '#666666', // Medium Gray - for timestamps
-  primary: '#1976D2'       // Royal Blue - for links/actions
+  primary: '#1976D2',      // Royal Blue - for links/actions
+  lightGray: '#F5F5F5'     // Light Gray - for table alternating rows
 };
 
 const MessageContainer = styled.div`
@@ -95,17 +96,6 @@ const DownloadButton = styled.button`
   }
 `;
 
-const DataPreview = styled.div`
-  font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
-  font-size: 12px;
-  color: ${colors.textSecondary};
-  background-color: #f8f9fa;
-  padding: 12px;
-  border-radius: 8px;
-  overflow-x: auto;
-  max-height: 200px;
-  overflow-y: auto;
-`;
 
 const ToggleButton = styled.button`
   background: none;
@@ -119,6 +109,58 @@ const ToggleButton = styled.button`
   &:hover {
     opacity: 0.8;
   }
+`;
+
+const Table = styled.table`
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 8px;
+  font-size: 14px;
+  background-color: ${colors.white};
+  border-radius: 8px;
+  overflow: hidden;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+`;
+
+const TableHeader = styled.thead`
+  background-color: ${colors.primary};
+  color: white;
+`;
+
+const TableRow = styled.tr`
+  &:nth-child(even) {
+    background-color: ${colors.lightGray};
+  }
+
+  &:hover {
+    background-color: #f0f8ff;
+  }
+`;
+
+const TableHeaderCell = styled.th`
+  padding: 12px 16px;
+  text-align: left;
+  font-weight: 600;
+  font-size: 13px;
+  border-bottom: 2px solid rgba(255, 255, 255, 0.2);
+`;
+
+const TableCell = styled.td`
+  padding: 12px 16px;
+  border-bottom: 1px solid #e5e7eb;
+  vertical-align: top;
+
+  &:first-child {
+    font-weight: 500;
+  }
+`;
+
+const TableFooter = styled.div`
+  margin-top: 8px;
+  font-size: 12px;
+  color: ${colors.textSecondary};
+  font-style: italic;
+  text-align: center;
 `;
 
 const ChatMessage = ({ message }) => {
@@ -141,21 +183,67 @@ const ChatMessage = ({ message }) => {
     }
   };
 
-  const renderDataPreview = () => {
-    if (!message.data || !message.data.cube_data) return null;
+  const renderDataTable = () => {
+    if (!message.data || !message.data.data) return null;
 
-    const data = message.data.cube_data;
-    const preview = Array.isArray(data) ? data.slice(0, 5) : [data];
+    const data = message.data.data;
+    if (!Array.isArray(data) || data.length === 0) return null;
+
+    // Show maximum 10 rows
+    const preview = data.slice(0, 10);
+    const hasMoreRows = data.length > 10;
+
+    // Get column headers from the first row
+    const headers = Object.keys(preview[0]);
+
+    // Helper function to format column names (remove prefixes and make readable)
+    const formatColumnName = (columnName) => {
+      return columnName
+        .replace(/^[^.]*\./, '') // Remove prefix like "EventPerformanceOverview."
+        .replace(/_/g, ' ') // Replace underscores with spaces
+        .replace(/\b\w/g, l => l.toUpperCase()); // Capitalize first letter of each word
+    };
+
+    // Helper function to format cell values
+    const formatCellValue = (value) => {
+      if (value === null || value === undefined) return '-';
+      if (typeof value === 'number') {
+        // Format large numbers with commas
+        return new Intl.NumberFormat().format(value);
+      }
+      return String(value);
+    };
 
     return (
-      <DataPreview>
-        {JSON.stringify(preview, null, 2)}
-        {Array.isArray(data) && data.length > 5 && (
-          <div style={{ marginTop: '8px', fontStyle: 'italic' }}>
-            ... and {data.length - 5} more rows
-          </div>
+      <>
+        <Table>
+          <TableHeader>
+            <TableRow>
+              {headers.map((header) => (
+                <TableHeaderCell key={header}>
+                  {formatColumnName(header)}
+                </TableHeaderCell>
+              ))}
+            </TableRow>
+          </TableHeader>
+          <tbody>
+            {preview.map((row, index) => (
+              <TableRow key={index}>
+                {headers.map((header) => (
+                  <TableCell key={header}>
+                    {formatCellValue(row[header])}
+                  </TableCell>
+                ))}
+              </TableRow>
+            ))}
+          </tbody>
+        </Table>
+        {hasMoreRows && (
+          <TableFooter>
+            Showing first 10 of {data.length} rows. Download CSV for complete data.
+          </TableFooter>
         )}
-      </DataPreview>
+      </>
     );
   };
 
@@ -186,12 +274,12 @@ const ChatMessage = ({ message }) => {
             )}
           </ResultsHeader>
 
-          {message.data.cube_data && (
+          {message.data.data && (
             <>
               <ToggleButton onClick={() => setShowData(!showData)}>
-                {showData ? 'Hide' : 'Show'} Data Preview
+                {showData ? 'Hide' : 'Show'} Data Table
               </ToggleButton>
-              {showData && renderDataPreview()}
+              {showData && renderDataTable()}
             </>
           )}
         </ResultsContainer>

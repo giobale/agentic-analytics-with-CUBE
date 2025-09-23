@@ -64,33 +64,15 @@ class LLMClient:
             print(f"   User query: {user_query}")
             print(f"   System prompt length: {len(messages[0]['content']) if messages and messages[0]['role'] == 'system' else 'No system message'}")
 
-            # Call OpenAI API
-            try:
-                print("🔍 DEBUG: Attempting API call with JSON response format...")
-                # Try with JSON format first
-                response = self.client.chat.completions.create(
-                    model=self.model,
-                    messages=messages,
-                    temperature=0.1,  # Low temperature for consistent responses
-                    max_tokens=2000,
-                    response_format={"type": "json_object"}  # Ensure JSON response
-                )
-                print("✅ DEBUG: API call with JSON format successful")
-            except Exception as json_error:
-                print(f"❌ DEBUG: JSON format failed with error: {str(json_error)}")
-                if "response_format" in str(json_error):
-                    # Fallback: call without JSON format constraint
-                    print("⚠️  JSON response format not supported, falling back to regular format")
-                    print("🔍 DEBUG: Attempting API call without JSON format...")
-                    response = self.client.chat.completions.create(
-                        model=self.model,
-                        messages=messages,
-                        temperature=0.1,
-                        max_tokens=2000
-                    )
-                    print("✅ DEBUG: API call without JSON format successful")
-                else:
-                    raise json_error
+            # Call OpenAI API - use regular format since JSON format has compatibility issues
+            print("🔍 DEBUG: Calling OpenAI API with regular format...")
+            response = self.client.chat.completions.create(
+                model=self.model,
+                messages=messages,
+                temperature=0.1,  # Low temperature for consistent responses
+                max_tokens=2000
+            )
+            print("✅ DEBUG: API call successful")
 
             # Extract and parse response
             response_content = response.choices[0].message.content
@@ -257,8 +239,7 @@ class LLMClient:
                 model=self.model,
                 messages=test_messages,
                 temperature=0.1,
-                max_tokens=100,
-                response_format={"type": "json_object"}
+                max_tokens=100
             )
 
             return {
