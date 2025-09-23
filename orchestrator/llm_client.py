@@ -56,32 +56,35 @@ class LLMClient:
             messages = conversation_messages.copy()
             messages.append({"role": "user", "content": user_query})
 
-            # Call OpenAI API
-            try:
-                # Try with JSON format first
-                response = self.client.chat.completions.create(
-                    model=self.model,
-                    messages=messages,
-                    temperature=0.1,  # Low temperature for consistent responses
-                    max_tokens=2000,
-                    response_format={"type": "json_object"}  # Ensure JSON response
-                )
-            except Exception as json_error:
-                if "response_format" in str(json_error):
-                    # Fallback: call without JSON format constraint
-                    print("⚠️  JSON response format not supported, falling back to regular format")
-                    response = self.client.chat.completions.create(
-                        model=self.model,
-                        messages=messages,
-                        temperature=0.1,
-                        max_tokens=2000
-                    )
-                else:
-                    raise json_error
+            print(f"🔍 DEBUG: Sending request to OpenAI API")
+            print(f"   Model: {self.model}")
+            print(f"   Temperature: 0.1")
+            print(f"   Max tokens: 2000")
+            print(f"   Messages count: {len(messages)}")
+            print(f"   User query: {user_query}")
+            print(f"   System prompt length: {len(messages[0]['content']) if messages and messages[0]['role'] == 'system' else 'No system message'}")
+
+            # Call OpenAI API - use regular format since JSON format has compatibility issues
+            print("🔍 DEBUG: Calling OpenAI API with regular format...")
+            response = self.client.chat.completions.create(
+                model=self.model,
+                messages=messages,
+                temperature=0.1,  # Low temperature for consistent responses
+                max_tokens=2000
+            )
+            print("✅ DEBUG: API call successful")
 
             # Extract and parse response
             response_content = response.choices[0].message.content
+
+            print(f"🔍 DEBUG: Received OpenAI response")
+            print(f"   Response length: {len(response_content)}")
+            print(f"   Usage: {response.usage.total_tokens} tokens total ({response.usage.prompt_tokens} prompt + {response.usage.completion_tokens} completion)")
+            print(f"   Raw response content: {response_content[:500]}{'...' if len(response_content) > 500 else ''}")
+
+            print("🔍 DEBUG: Attempting to parse JSON response...")
             parsed_response = json.loads(response_content)
+            print(f"✅ DEBUG: JSON parsing successful. Response type: {parsed_response.get('response_type', 'unknown')}")
 
             # Validate and normalize response format
             normalized_response = self._normalize_response(parsed_response, user_query)
@@ -99,8 +102,12 @@ class LLMClient:
             }
 
         except json.JSONDecodeError as e:
+            print(f"❌ DEBUG: JSON parsing failed: {str(e)}")
+            print(f"   Raw content that failed to parse: {response_content}")
             return self._create_error_response(f"Invalid JSON response from LLM: {str(e)}", user_query)
         except Exception as e:
+            print(f"❌ DEBUG: General LLM API error: {str(e)}")
+            print(f"   Error type: {type(e).__name__}")
             return self._create_error_response(f"LLM API error: {str(e)}", user_query)
 
     def _normalize_response(self, llm_response: Dict[str, Any], user_query: str) -> Dict[str, Any]:
@@ -232,8 +239,7 @@ class LLMClient:
                 model=self.model,
                 messages=test_messages,
                 temperature=0.1,
-                max_tokens=100,
-                response_format={"type": "json_object"}
+                max_tokens=100
             )
 
             return {

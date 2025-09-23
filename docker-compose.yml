@@ -59,8 +59,73 @@ services:
       interval: 30s
       start_period: 60s
 
+  orchestrator:
+    build:
+      context: ./orchestrator
+      dockerfile: Dockerfile
+    container_name: query-orchestrator
+    environment:
+      # OpenAI Configuration
+      OPENAI_API_KEY: ${OPENAI_API_KEY}
+
+      # CUBE Connection
+      CUBE_BASE_URL: http://cube:4000
+      CUBEJS_API_SECRET: ${CUBEJS_API_SECRET:-baubeach}
+
+      # Cache Configuration
+      CACHE_DIR: /app/cache
+
+      # Logging
+      PYTHONUNBUFFERED: 1
+
+    ports:
+      - "${ORCHESTRATOR_PORT:-8080}:8080"
+    volumes:
+      # Persistent cache for system prompts
+      - orchestrator_cache:/app/cache
+      # Logs directory
+      - orchestrator_logs:/app/logs
+      # Copy CUBE model definitions for system prompt generation
+      - ./cube-core/model:/app/cube-models:ro
+    networks:
+      - mysql-network
+    depends_on:
+      cube:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/readyz"]
+      timeout: 10s
+      retries: 5
+      interval: 30s
+      start_period: 120s
+    restart: unless-stopped
+
+  chat-frontend:
+    build:
+      context: ./chat-frontend
+      dockerfile: Dockerfile
+    container_name: cube-chat-frontend
+    ports:
+      - "${FRONTEND_PORT:-3000}:80"
+    networks:
+      - mysql-network
+    depends_on:
+      orchestrator:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost/health"]
+      timeout: 10s
+      retries: 5
+      interval: 30s
+      start_period: 60s
+    restart: unless-stopped
+
 volumes:
   mysql_data:
+    driver: local
+  orchestrator_cache:
+    driver: local
+  orchestrator_logs:
     driver: local
 
 networks:

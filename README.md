@@ -2,161 +2,155 @@
 
 This Proof of Concept demonstrates a natural language querying system built on top of a MySQL database using CUBE's semantic layer. Users can interact with their data through a conversational chat interface that leverages an LLM to translate natural language questions into appropriate CUBE API calls.
 
-## Components Overview
-
-### 1. MySQL Database
-Primary data storage with tables populated from CSV files. Provides the foundational data layer for the event management system.
-
-### 2. CUBE Core (Semantic Layer)
-Provides semantic modeling and API layer over MySQL. Defines data cubes, measures, dimensions, and business logic for analytical queries.
-
-### 3. Orchestrator Service
-Intelligent query coordination service that transforms natural language into actionable data queries. Features context preparation, conversation management, LLM integration, and CUBE query execution.
-
-### 4. Chat Application (Future Component)
-User interface for natural language interactions with session management and response formatting.
-
-## Project Structure
+## Architecture Overview
 
 ```
-├── docker-compose.yml          # Docker Compose configuration
-├── .env                       # Environment variables
-├── README.md                  # This file
-├── test-api.sh                # Quick API authentication tester
-├── extract-jwt-token.sh       # JWT token extraction script
-├── db-tables/                 # Place your CSV files here
-├── mysql-container/           # MySQL container setup
-│   ├── docker/
-│   │   └── Dockerfile        # MySQL container configuration
-│   ├── scripts/
-│   │   └── csv-import-service.py  # CSV import service
-│   └── config/
-│       └── mysql.cnf         # MySQL configuration
-├── cube-core/                 # Cube.js semantic layer
-│   ├── Dockerfile            # Cube container configuration
-│   ├── index.js             # Main application entry point
-│   ├── cube.js              # Root configuration file
-│   ├── test.sh              # Internal testing script
-│   ├── package.json         # Node.js dependencies
-│   ├── config/
-│   │   └── cube.js          # Cube configuration file
-│   └── model/
-│       ├── cubes/           # YAML cube schema definitions
-│       │   ├── dim_events.yml
-│       │   ├── dim_shops.yml
-│       │   ├── dim_tickets.yml
-│       │   └── fact_orders.yml
-│       └── views/           # View definitions
-├── orchestrator/              # Natural language query processor
-│   ├── orchestrator.py      # Main orchestrator service
-│   ├── llm_client.py        # OpenAI API integration
-│   ├── cube_client.py       # CUBE API client
-│   ├── conversation_manager.py # Chat history management
-│   ├── system-prompt-generator/ # Context preparation system
-│   │   ├── context_preparation/
-│   │   ├── templates/       # System prompt templates
-│   │   ├── config/          # Configuration files
-│   │   └── tests/          # Testing utilities
-│   └── tests/              # Orchestrator tests
-└── cube-api-client/          # Python API test application
-    ├── cube_api_test.py     # Main test application
-    ├── requirements.txt     # Python dependencies
-    └── results/             # CSV output files (auto-created)
+┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
+│   Chat Frontend │────│   Orchestrator  │────│   CUBE Core     │────│   MySQL DB      │
+│ (React/Nginx)   │    │   (FastAPI)     │    │ (Semantic Layer)│    │ (Data Storage)  │
+│ Port: 3000      │    │   Port: 8080    │    │   Port: 4000    │    │   Port: 3306    │
+└─────────────────┘    └─────────────────┘    └─────────────────┘    └─────────────────┘
+                                │
+                                │
+                        ┌─────────────────┐
+                        │   LLM Service   │
+                        │   (OpenAI API)  │
+                        └─────────────────┘
 ```
 
-## Quick Start Instructions
+**Key Workflow:**
+1. User enters a natural language question in the chat interface
+2. Frontend sends HTTP request to orchestrator REST API (`/query` endpoint)
+3. Orchestrator processes query and calls OpenAI LLM for CUBE query generation
+4. Orchestrator executes generated query against CUBE API
+5. CUBE retrieves data from MySQL database
+6. Results flow back through orchestrator to frontend as structured data and CSV exports
+
+## Quick Start
 
 ### Prerequisites
 - Docker and Docker Compose
-- Python 3.8+ (for test applications)
-- OpenAI API key (for orchestrator)
-- curl (for API testing)
+- OpenAI API key
 
-### 1. Environment Setup
+### Build and Run
 
+1. **Clone and setup environment:**
 ```bash
-# Clone the project
 git clone <repository-url>
 cd PoC-V1-CUBE-Semantyc-Layer
 
-# Create environment file
-cp .env.example .env
-# Edit .env and add your OPENAI_API_KEY
-
-# Place CSV files in db-tables/ directory (sample files included)
-ls db-tables/  # Should show: DIM_Events.csv, DIM_Shops.csv, DIM_Tickets.csv, FACT_Orders.csv
+# Add your OpenAI API key to .env file
+echo 'OPENAI_API_KEY="your-api-key-here"' >> .env
 ```
 
-### 2. Start the Core Services
-
+2. **Build and start all services:**
 ```bash
-# Start MySQL and CUBE containers
 docker-compose up --build -d
+```
 
-# Wait for health checks to pass (1-2 minutes)
+3. **Wait for services to be ready (2-3 minutes):**
+```bash
+# Check all services are healthy
 docker-compose ps
-# Both containers should show "healthy" status
+
+# All containers should show "healthy" status
 ```
 
-### 3. Test CUBE Instance
-
+4. **Access the chat application:**
 ```bash
-# Test CUBE health
-curl http://localhost:4000/readyz
-# Expected: {"health":"HEALTH"}
-
-# Test CUBE development interface
-open http://localhost:4000
+# Open your browser to:
+http://localhost:3000
 ```
 
-### 4. Test with Python API Client
+## Available Measures and Dimensions
 
-```bash
-cd cube-api-client
+The system provides access to event management data through the **Event Performance Overview** view:
 
-# Install dependencies
-python3 -m venv venv
-source venv/bin/activate
-pip install -r requirements.txt
+### Measures (Metrics you can query)
+- **Order Count**: Total number of orders
+- **Total Order Value**: Sum of all order values (total revenue)
+- **Average Order Value**: Mean order revenue
+- **Total Tickets Sold**: Total number of tickets sold
+- **Average Tickets per Order**: Average number of tickets per order
 
-# Run test queries
-python3 cube_api_test.py
-```
+### Dimensions (Ways to filter and group data)
+- **Order Information**: Order ID, Order Date, Visitor Email
+- **Event Information**: Event ID, Event Name, Event Start Date, Event Status, Event Category
+- **Business Information**: Company ID, Shop ID, Ticket ID, Payment Method, Currency
 
-### 5. Test the Orchestrator (Natural Language Processing)
+## Example Questions to Ask
 
-```bash
-cd orchestrator
+Try these natural language queries in the chat interface:
 
-# Install dependencies
-python3 -m venv venv
-source venv/bin/activate
-pip install -r requirements.txt
-
-# Run interactive test
-python3 tests/test_orchestrator_interactive.py
-```
-
-### 6. Basic Usage Commands
-
-```bash
-# View container logs
-docker-compose logs cube
-docker-compose logs mysql
-
-# Stop services
-docker-compose down
-
-# Rebuild and restart
-docker-compose up --build -d
-```
-
-## Testing Natural Language Queries
-
-With the orchestrator running, you can test queries like:
-- "Show me total revenue for each event"
-- "Which events sold the most tickets?"
-- "What's the average order value by shop?"
+### Revenue Analytics
+- "Show me the total revenue for each event"
+- "What's the average order value by payment method?"
+- "Which events generated the most revenue?"
 - "Show monthly revenue trends"
 
-The orchestrator will convert these into appropriate CUBE API calls and return formatted results.
+### Event Performance
+- "Which events sold the most tickets?"
+- "What's the average number of tickets sold per order?"
+- "Show me events with the highest average order value"
+- "Which event categories perform best?"
+
+### Customer Insights
+- "How many orders were placed last month?"
+- "What are the most popular payment methods?"
+- "Show me orders by currency"
+- "Which shop locations have the highest sales?"
+
+### Time-based Analysis
+- "Show me revenue by month"
+- "What's the trend in ticket sales over time?"
+- "Compare this month's performance to last month"
+- "Show me orders placed in the last 7 days"
+
+## Service Health Checks
+
+```bash
+# Check individual services
+curl http://localhost:3000/health        # Frontend
+curl http://localhost:8080/health        # Orchestrator
+curl http://localhost:4000/readyz        # CUBE Core
+curl http://localhost:3306               # MySQL (connection test)
+
+# View logs
+docker-compose logs chat-frontend
+docker-compose logs orchestrator
+docker-compose logs cube
+docker-compose logs mysql
+```
+
+## Troubleshooting
+
+### If chat interface doesn't load:
+```bash
+docker-compose restart chat-frontend
+```
+
+### If queries fail:
+```bash
+# Check orchestrator logs
+docker-compose logs orchestrator
+
+# Restart orchestrator
+docker-compose restart orchestrator
+```
+
+### To rebuild everything:
+```bash
+docker-compose down
+docker-compose up --build -d
+```
+
+## Development
+
+The system is fully containerized for easy development and deployment. Each service can be developed independently:
+
+- **Frontend**: React application with styled components
+- **Orchestrator**: Python FastAPI service with OpenAI integration
+- **CUBE Core**: Node.js semantic layer with YAML model definitions
+- **MySQL**: Database with CSV data loading capabilities
+
+For detailed development information, see the CLAUDE.md file.

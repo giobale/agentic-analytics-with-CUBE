@@ -1,15 +1,15 @@
-# Orchestrator - Natural Language to CUBE Query Processing
+# Orchestrator - Containerized Natural Language Query Processing
 
 ## Overview
 
-The **Orchestrator** is the main component that handles the complete pipeline from natural language queries to CUBE API results. It coordinates system prompt generation, LLM interaction, conversation memory management, and CUBE query execution.
+The **Orchestrator** is a containerized service that handles the complete pipeline from natural language queries to CUBE API results. It features intelligent system prompt caching, conversation memory management, and seamless container integration.
 
 ## Architecture
 
 ```
 ┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
 │   User Query    │───▶│   Orchestrator  │───▶│   CUBE Results  │
-│ (Natural Lang.) │    │   (Pipeline)    │    │   (Data + CSV)  │
+│ (Natural Lang.) │    │  (Container)    │    │   (Data + CSV)  │
 └─────────────────┘    └─────────────────┘    └─────────────────┘
                                │
                     ┌──────────┼──────────┐
@@ -17,7 +17,7 @@ The **Orchestrator** is the main component that handles the complete pipeline fr
               ┌──────▼──┐ ┌─────▼─────┐ ┌──▼──────┐
               │ System  │ │    LLM    │ │  CUBE   │
               │ Prompt  │ │  Client   │ │ Client  │
-              │Generator│ │ (OpenAI)  │ │ (API)   │
+              │ Cache   │ │ (OpenAI)  │ │ (API)   │
               └─────────┘ └───────────┘ └─────────┘
                                │
                     ┌─────────────────┐
@@ -26,6 +26,14 @@ The **Orchestrator** is the main component that handles the complete pipeline fr
                     │ (6 Messages)    │
                     └─────────────────┘
 ```
+
+## Container Features
+
+- **System Prompt Caching**: Generated once on startup, cached for performance
+- **Health Checks**: Readiness and liveness endpoints for orchestration
+- **Persistent Storage**: Cache survives container restarts
+- **Manual Updates**: Update cached prompts without container restart
+- **Dependency Management**: Waits for CUBE service before starting
 
 ## Components
 
@@ -138,14 +146,66 @@ Expected packages:
 - `pandas` - Data manipulation and CSV export
 - `pyyaml` - YAML file parsing
 
-## Usage
+## Container Usage
+
+### Docker Compose (Recommended)
+```bash
+# Start with full stack
+docker-compose up --build -d
+
+# Check status
+docker-compose ps
+
+# View logs
+docker-compose logs orchestrator
+```
+
+### Standalone Container
+```bash
+# Build image
+docker build -t orchestrator .
+
+# Run container
+docker run -d \
+  -p 8080:8080 \
+  -e OPENAI_API_KEY="your-key" \
+  -e CUBE_BASE_URL="http://cube:4000" \
+  --name query-orchestrator \
+  orchestrator
+```
+
+### System Prompt Management
+```bash
+# Update cached system prompt
+docker exec query-orchestrator ./scripts/update-system-prompt.sh
+
+# Show current prompt info
+docker exec query-orchestrator ./scripts/update-system-prompt.sh info
+
+# List available backups
+docker exec query-orchestrator ./scripts/update-system-prompt.sh list-backups
+```
+
+### Health Monitoring
+```bash
+# Health check
+curl http://localhost:8080/health
+
+# Readiness check
+curl http://localhost:8080/readyz
+
+# System prompt metadata
+curl http://localhost:8080/system-prompt-info
+```
+
+## Python Usage
 
 ### Basic Usage
 
 ```python
 from orchestrator import QueryOrchestrator
 
-# Initialize orchestrator (loads .env automatically)
+# Initialize orchestrator (loads from cache automatically)
 orchestrator = QueryOrchestrator()
 init_result = orchestrator.initialize()
 

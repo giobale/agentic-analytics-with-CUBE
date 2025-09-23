@@ -1,0 +1,17 @@
+# Core dependencies for orchestrator service
+openai>=1.0.0
+requests>=2.31.0
+python-dotenv>=1.0.0
+pyyaml>=6.0.1
+fastapi>=0.104.0
+uvicorn>=0.24.0
+
+# Additional utility packages
+pandas>=2.0.0
+typing-extensions>=4.8.0
+
+# CORS middleware for frontend integration
+python-multipart>=0.0.6
+
+# JWT token generation for CUBE authentication
+PyJWT>=2.8.0

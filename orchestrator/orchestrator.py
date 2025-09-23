@@ -3,6 +3,7 @@
 
 import sys
 import os
+import json
 from typing import Dict, List, Any, Optional
 from datetime import datetime
 from pathlib import Path
@@ -10,9 +11,12 @@ from pathlib import Path
 # Load environment variables from .env file
 try:
     from dotenv import load_dotenv
-    # Load .env file from the project root
+    # For development: Load .env file from the project root
+    # For containers: Use environment variables passed by Docker Compose
     env_path = Path(__file__).parent.parent / '.env'
-    load_dotenv(env_path)
+    if env_path.exists():
+        load_dotenv(env_path)
+    # In containers, this will use environment variables set by Docker Compose
 except ImportError:
     print("Warning: python-dotenv not installed. Install with: pip install python-dotenv")
     print("Falling back to system environment variables only.")
@@ -62,10 +66,118 @@ class QueryOrchestrator:
         system_prompt_path = os.path.join(os.path.dirname(__file__), 'system-prompt-generator')
         self.context_manager = ContextManager(system_prompt_path)
 
+        # Cache configuration
+        self.cache_dir = os.getenv("CACHE_DIR", "/app/cache")
+        self.system_prompt_cache_file = os.path.join(self.cache_dir, "system_prompt.txt")
+        self.system_prompt_metadata_file = os.path.join(self.cache_dir, "system_prompt_metadata.json")
+
         # Orchestrator state
         self.is_initialized = False
         self.system_prompt = None
+        self.system_prompt_metadata = None
         self.initialization_errors = []
+
+    def _load_cached_system_prompt(self) -> Dict[str, Any]:
+        """
+        Load system prompt from cache if available.
+
+        Returns:
+            Result dictionary with success status and loaded content
+        """
+        try:
+            if os.path.exists(self.system_prompt_cache_file):
+                with open(self.system_prompt_cache_file, 'r', encoding='utf-8') as f:
+                    self.system_prompt = f.read()
+
+                # Load metadata if available
+                if os.path.exists(self.system_prompt_metadata_file):
+                    with open(self.system_prompt_metadata_file, 'r', encoding='utf-8') as f:
+                        self.system_prompt_metadata = json.load(f)
+                else:
+                    self.system_prompt_metadata = {
+                        "loaded_from_cache": True,
+                        "cache_file": self.system_prompt_cache_file
+                    }
+
+                return {
+                    "success": True,
+                    "source": "cache",
+                    "length": len(self.system_prompt),
+                    "metadata": self.system_prompt_metadata
+                }
+            else:
+                return {
+                    "success": False,
+                    "source": "cache",
+                    "error": "Cache file not found"
+                }
+        except Exception as e:
+            return {
+                "success": False,
+                "source": "cache",
+                "error": f"Failed to load cached system prompt: {str(e)}"
+            }
+
+    def _save_system_prompt_cache(self, system_prompt: str, metadata: Dict[str, Any]) -> bool:
+        """
+        Save system prompt to cache.
+
+        Args:
+            system_prompt: The system prompt text
+            metadata: Metadata about the system prompt
+
+        Returns:
+            True if saved successfully
+        """
+        try:
+            # Ensure cache directory exists
+            os.makedirs(self.cache_dir, exist_ok=True)
+
+            # Save system prompt
+            with open(self.system_prompt_cache_file, 'w', encoding='utf-8') as f:
+                f.write(system_prompt)
+
+            # Save metadata
+            cache_metadata = {
+                **metadata,
+                "cached_at": datetime.now().isoformat(),
+                "cache_file": self.system_prompt_cache_file
+            }
+
+            with open(self.system_prompt_metadata_file, 'w', encoding='utf-8') as f:
+                json.dump(cache_metadata, f, indent=2)
+
+            self.system_prompt_metadata = cache_metadata
+            return True
+
+        except Exception as e:
+            print(f"Warning: Failed to save system prompt cache: {str(e)}")
+            return False
+
+    def reload_system_prompt_cache(self) -> Dict[str, Any]:
+        """
+        Manually reload system prompt from cache.
+
+        Returns:
+            Reload result with status information
+        """
+        result = self._load_cached_system_prompt()
+
+        if result["success"]:
+            return {
+                "success": True,
+                "message": "System prompt reloaded from cache",
+                "length": len(self.system_prompt),
+                "metadata": self.system_prompt_metadata,
+                "timestamp": datetime.now().isoformat()
+            }
+        else:
+            return {
+                "success": False,
+                "message": "Failed to reload system prompt from cache",
+                "error": result.get("error", "Unknown error"),
+                "timestamp": datetime.now().isoformat()
+            }
 
     def initialize(self) -> Dict[str, Any]:
         """
@@ -99,17 +211,37 @@ class QueryOrchestrator:
             if not llm_valid:
                 initialization_result["errors"].append("OpenAI API key validation failed")
 
-            # Generate system prompt
+            # Load or generate system prompt
             try:
-                prompt_result = self.context_manager.generate_system_prompt()
-                self.system_prompt = prompt_result["system_prompt"]
-                initialization_result["components"]["system_prompt"] = {
-                    "success": True,
-                    "length": len(self.system_prompt),
-                    "metadata": prompt_result["metadata"]
-                }
+                # First, try to load from cache
+                cache_result = self._load_cached_system_prompt()
+
+                if cache_result["success"]:
+                    # Successfully loaded from cache
+                    initialization_result["components"]["system_prompt"] = {
+                        "success": True,
+                        "source": "cache",
+                        "length": len(self.system_prompt),
+                        "metadata": cache_result["metadata"]
+                    }
+                else:
+                    # Cache failed, generate new system prompt
+                    prompt_result = self.context_manager.generate_system_prompt()
+                    self.system_prompt = prompt_result["system_prompt"]
+
+                    # Save to cache for future use
+                    self._save_system_prompt_cache(self.system_prompt, prompt_result["metadata"])
+
+                    initialization_result["components"]["system_prompt"] = {
+                        "success": True,
+                        "source": "generated",
+                        "length": len(self.system_prompt),
+                        "metadata": prompt_result["metadata"],
+                        "cached": True
+                    }
+
             except Exception as e:
-                initialization_result["errors"].append(f"System prompt generation failed: {str(e)}")
+                initialization_result["errors"].append(f"System prompt initialization failed: {str(e)}")
                 initialization_result["components"]["system_prompt"] = {
                     "success": False,
                     "error": str(e)

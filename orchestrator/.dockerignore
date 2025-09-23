@@ -1,0 +1,51 @@
+# ABOUTME: Docker ignore file for orchestrator to optimize build context
+# ABOUTME: Excludes unnecessary files from Docker build context
+
+# Python cache and virtual environments
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.egg-info/
+venv/
+env/
+.venv/
+.env/
+
+# Test and result directories
+tests/results/
+system-prompt-generator/tests/results/
+*/results/
+
+# IDE and editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS files
+.DS_Store
+.DS_Store?
+._*
+Thumbs.db
+ehthumbs.db
+
+# Logs and temporary files
+*.log
+logs/
+*.tmp
+*.temp
+
+# Git
+.git/
+.gitignore
+
+# Documentation
+*.md
+!README.md
+
+# Local configuration files
+.env
+.env.local
+.env.*.local
