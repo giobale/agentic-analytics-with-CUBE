@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import styled from 'styled-components';
+import axios from 'axios';
 
 const colors = {
   primary: '#6366F1',      // Modern indigo
@@ -132,6 +133,37 @@ const DownloadButton = styled.button`
   }
 `;
 
+const GenerateReportButton = styled.button`
+  background: linear-gradient(135deg, ${colors.secondary} 0%, ${colors.primary} 100%);
+  color: ${colors.white};
+  border: none;
+  padding: 10px 16px;
+  border-radius: 12px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-left: 8px;
+
+  &::before {
+    content: '📊';
+    font-size: 14px;
+  }
+
+  &:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(139, 92, 246, 0.3);
+  }
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    transform: none;
+  }
+`;
 
 const ToggleButton = styled.button`
   background: ${colors.background};
@@ -232,6 +264,7 @@ const TableFooter = styled.div`
 
 const ChatMessage = ({ message }) => {
   const [showData, setShowData] = useState(false);
+  const [isGeneratingReport, setIsGeneratingReport] = useState(false);
 
   const formatTimestamp = (date) => {
     return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
@@ -247,6 +280,42 @@ const ChatMessage = ({ message }) => {
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
+    }
+  };
+
+  const handleGenerateReport = async () => {
+    if (!message.data || !message.data.csv_filename) {
+      alert('No CSV data available for analysis');
+      return;
+    }
+
+    setIsGeneratingReport(true);
+
+    try {
+      // Download the CSV content first
+      const csvResponse = await axios.get(`/api/download/${message.data.csv_filename}`, {
+        responseType: 'text'
+      });
+
+      // Send to analyst agent API (CSV only, no query)
+      const analystResponse = await axios.post('http://localhost:8502/upload-csv', {
+        csv_content: csvResponse.data,
+        filename: message.data.csv_filename
+      });
+
+      if (analystResponse.data.success) {
+        // Open Streamlit app in new tab
+        window.open(analystResponse.data.streamlit_url, '_blank');
+
+        alert('CSV uploaded to analyst! The Streamlit app has opened in a new tab.');
+      } else {
+        alert(`Failed to upload CSV: ${analystResponse.data.error || 'Unknown error'}`);
+      }
+    } catch (error) {
+      console.error('Error generating report:', error);
+      alert(`Error generating report: ${error.response?.data?.detail || error.message}`);
+    } finally {
+      setIsGeneratingReport(false);
     }
   };
 
@@ -335,9 +404,17 @@ const ChatMessage = ({ message }) => {
               {message.data.row_count && ` (${message.data.row_count} rows)`}
             </ResultsTitle>
             {message.data.csv_filename && (
-              <DownloadButton onClick={handleDownloadCSV}>
-                Download CSV
-              </DownloadButton>
+              <div style={{ display: 'flex', alignItems: 'center' }}>
+                <DownloadButton onClick={handleDownloadCSV}>
+                  Download CSV
+                </DownloadButton>
+                <GenerateReportButton
+                  onClick={handleGenerateReport}
+                  disabled={isGeneratingReport}
+                >
+                  {isGeneratingReport ? 'Uploading...' : 'Generate Report'}
+                </GenerateReportButton>
+              </div>
             )}
           </ResultsHeader>
 
@@ -349,6 +426,7 @@ const ChatMessage = ({ message }) => {
               {showData && renderDataTable()}
             </>
           )}
+
         </ResultsContainer>
       )}
     </MessageContainer>

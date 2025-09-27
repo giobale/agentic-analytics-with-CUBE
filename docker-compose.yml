@@ -120,12 +120,51 @@ services:
       start_period: 60s
     restart: unless-stopped
 
+  analyst-agent:
+    build:
+      context: ./analyst-agent
+      dockerfile: Dockerfile
+    container_name: ai-data-analyst
+    environment:
+      # OpenAI Configuration
+      OPENAI_API_KEY: ${OPENAI_API_KEY}
+
+      # Service Ports
+      STREAMLIT_PORT: 8501
+      ANALYST_API_PORT: 8502
+
+      # Logging
+      PYTHONUNBUFFERED: 1
+    ports:
+      - "${ANALYST_STREAMLIT_PORT:-8501}:8501"
+      - "${ANALYST_API_PORT:-8502}:8502"
+    volumes:
+      # Persistent storage for datasets and analysis results
+      - analyst_datasets:/app/analyst-service/datasets
+      - analyst_results:/app/analyst-service/results
+      - analyst_history:/app/analyst-service/history
+    networks:
+      - mysql-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8501/health"]
+      timeout: 10s
+      retries: 5
+      interval: 30s
+      start_period: 60s
+    restart: unless-stopped
+
 volumes:
   mysql_data:
     driver: local
   orchestrator_cache:
     driver: local
   orchestrator_logs:
+    driver: local
+  analyst_datasets:
+    driver: local
+  analyst_results:
+    driver: local
+  analyst_history:
     driver: local
 
 networks:

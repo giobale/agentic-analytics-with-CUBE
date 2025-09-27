@@ -324,7 +324,7 @@ class QueryOrchestrator:
             if response_type == "cube_query":
                 # Execute CUBE query
                 cube_query = llm_response.get("cube_query")
-                cube_result = self.cube_client.execute_query(cube_query)
+                cube_result = self.cube_client.execute_query(cube_query, user_query)
 
                 processing_result["pipeline_steps"]["cube_execution"] = cube_result
 

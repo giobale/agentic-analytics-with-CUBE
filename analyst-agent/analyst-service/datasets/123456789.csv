@@ -1,0 +1,9 @@
+Year,Event Segment,event_count,avg_order_value,avg_tickets,avg_age,avg_tickets_soldPer_event,avg_order_revenuePer_event
+2024,Casual Events,295,49.09,2.1,29.77,281.51,6578.75
+2024,Club Nights & Single-Day Festivals,110,140.45,2.24,27.58,2510.52,157674.38
+2024,Extended Experiences,16,197.58,1.97,32.17,364.06,36453.92
+2024,Weekend Festivals,39,95.84,3.16,34.4,2614.74,79180.12
+2025,Casual Events,225,49.73,1.99,29.48,288.49,7218.5
+2025,Club Nights & Single-Day Festivals,166,151.98,2.29,28.1,1384.23,91711.24
+2025,Extended Experiences,10,257.33,2.11,32.37,1623,198192.5
+2025,Weekend Festivals,53,95.62,3.19,32.44,2118.36,63595.05
