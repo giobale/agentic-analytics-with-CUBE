@@ -315,6 +315,10 @@ if 'selected_dataset' not in st.session_state:
     st.session_state.selected_dataset = None
 if 'datasets_refreshed' not in st.session_state:
     st.session_state.datasets_refreshed = False
+if 'last_dataset_count' not in st.session_state:
+    st.session_state.last_dataset_count = len(st.session_state.available_datasets)
+if 'url_param_processed' not in st.session_state:
+    st.session_state.url_param_processed = False
 
 # Default dataset selection logic: select latest dataset if none selected and datasets exist
 if not st.session_state.selected_dataset and st.session_state.available_datasets:
@@ -368,25 +372,61 @@ def save_uploaded_file(uploaded_file) -> str:
         st.error(f"Error saving file: {str(e)}")
         return None
 
+def check_for_new_datasets():
+    """Check if new datasets have been added and refresh if needed."""
+    try:
+        current_datasets = get_available_datasets()
+        current_count = len(current_datasets)
+
+        if current_count != st.session_state.last_dataset_count:
+            frontend_logger.info(f"Dataset count changed from {st.session_state.last_dataset_count} to {current_count}, refreshing")
+            st.session_state.available_datasets = current_datasets
+            st.session_state.last_dataset_count = current_count
+
+            # Auto-select newest dataset if no dataset is currently selected
+            if not st.session_state.selected_dataset and current_datasets:
+                st.session_state.selected_dataset = current_datasets[0]
+                frontend_logger.info(f"Auto-selected newest dataset: {current_datasets[0]}")
+
+            return True
+        return False
+    except Exception as e:
+        frontend_logger.error(f"Error checking for new datasets: {str(e)}")
+        return False
+
 def main():
     frontend_logger.info("Starting Streamlit Data Analyst application")
     frontend_logger.debug(f"Frontend configuration: {frontend_config}")
 
-    # Handle URL parameters from chat frontend
+    # Check for new datasets on each run
+    check_for_new_datasets()
+
+    # Handle URL parameters from chat frontend (only once per session)
     query_params = st.query_params
     url_dataset = query_params.get('dataset', None)
 
-    if url_dataset:
+    if url_dataset and not st.session_state.url_param_processed:
         frontend_logger.info(f"Received dataset from chat frontend: {url_dataset}")
-        # Auto-select the dataset if it exists
-        available_datasets = get_available_datasets()
+        # Force refresh the available datasets when coming from chat frontend
+        st.session_state.available_datasets = get_available_datasets()
+        available_datasets = st.session_state.available_datasets
+
         if url_dataset in available_datasets:
             st.session_state.selected_dataset = url_dataset
             frontend_logger.info(f"Auto-selected dataset: {url_dataset}")
             st.session_state.from_chat_frontend = True
         else:
+            frontend_logger.warning(f"Dataset {url_dataset} not found in available datasets: {available_datasets}")
             st.session_state.from_chat_frontend = False
-    else:
+
+        # Mark URL parameter as processed
+        st.session_state.url_param_processed = True
+
+        # Clear the URL parameter after processing to allow manual dataset selection
+        if 'dataset' in st.query_params:
+            del st.query_params['dataset']
+            st.rerun()
+    elif not url_dataset:
         st.session_state.from_chat_frontend = False
 
     st.title("📊 AI Data Analyst")
@@ -464,6 +504,7 @@ def main():
                     if not is_selected:
                         st.session_state.selected_dataset = dataset
                         st.session_state.current_analysis = None  # Clear previous analysis
+                        st.session_state.from_chat_frontend = False  # Clear chat frontend flag
                         st.rerun()
 
                 # Show dataset info if selected
@@ -480,6 +521,7 @@ def main():
                 if st.button("❌ Clear Selection", type="secondary"):
                     st.session_state.selected_dataset = None
                     st.session_state.current_analysis = None
+                    st.session_state.from_chat_frontend = False  # Clear chat frontend flag
                     st.rerun()
 
             with col_history:

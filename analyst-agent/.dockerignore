@@ -46,10 +46,10 @@ Thumbs.db
 *.log
 logs/
 
-# Analysis results (these will be in mounted volumes)
-analyst-service/results/*
-analyst-service/datasets/*.csv
-analyst-service/history/*.json
+# Analysis results - Keep existing files for initial copy, but exclude temp files
+analyst-service/results/*.tmp
+analyst-service/results/*.temp
+# Note: Keep datasets and history files so they get copied into image initially
 
 # Temporary files
 tmp/

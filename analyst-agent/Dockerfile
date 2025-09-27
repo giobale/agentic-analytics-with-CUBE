@@ -27,7 +27,17 @@ COPY . /app/
 RUN mkdir -p /app/analyst-service/datasets \
     /app/analyst-service/results \
     /app/analyst-service/history \
-    /app/frontend/logs
+    /app/frontend/logs \
+    /app/init-data/datasets \
+    /app/init-data/history
+
+# After copying files, create backup copies for volume initialization
+RUN if [ -d "/app/analyst-service/datasets" ]; then \
+        cp -r /app/analyst-service/datasets/* /app/init-data/datasets/ 2>/dev/null || true; \
+    fi && \
+    if [ -d "/app/analyst-service/history" ]; then \
+        cp -r /app/analyst-service/history/* /app/init-data/history/ 2>/dev/null || true; \
+    fi
 
 # Set environment variables
 ENV PYTHONPATH=/app/analyst-service/src:/app/analyst-service
