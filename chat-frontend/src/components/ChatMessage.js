@@ -262,7 +262,167 @@ const TableFooter = styled.div`
   }
 `;
 
-const ChatMessage = ({ message }) => {
+const ClarificationContainer = styled.div`
+  margin-top: 16px;
+  background: linear-gradient(135deg, rgba(99, 102, 241, 0.05) 0%, rgba(139, 92, 246, 0.05) 100%);
+  border-radius: 16px;
+  padding: 20px;
+  border: 2px solid ${colors.primary};
+  max-width: 100%;
+`;
+
+const ClarificationTitle = styled.h4`
+  margin: 0 0 16px 0;
+  color: ${colors.primary};
+  font-size: 16px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+
+  &::before {
+    content: '❓';
+    font-size: 18px;
+  }
+`;
+
+const QuestionsList = styled.ul`
+  list-style: none;
+  padding: 0;
+  margin: 0 0 16px 0;
+`;
+
+const QuestionItem = styled.li`
+  padding: 12px 16px;
+  margin-bottom: 8px;
+  background: ${colors.cardBg};
+  border-radius: 12px;
+  border-left: 4px solid ${colors.accent};
+  color: ${colors.textPrimary};
+  font-weight: 500;
+  font-size: 14px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+
+  &::before {
+    content: '•';
+    color: ${colors.accent};
+    font-weight: bold;
+    margin-right: 8px;
+  }
+`;
+
+const SuggestionsTitle = styled.h5`
+  margin: 16px 0 12px 0;
+  color: ${colors.textSecondary};
+  font-size: 14px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+
+  &::before {
+    content: '💡';
+    font-size: 16px;
+  }
+`;
+
+const SuggestionsList = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+`;
+
+const SuggestionItem = styled.div`
+  padding: 12px 16px;
+  background: ${colors.cardBg};
+  border-radius: 12px;
+  border: 2px solid ${colors.background};
+  color: ${colors.textPrimary};
+  font-size: 14px;
+  line-height: 1.5;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+
+  &:hover {
+    border-color: ${colors.success};
+    background: ${colors.background};
+    transform: translateX(4px);
+  }
+
+  &::before {
+    content: '→';
+    color: ${colors.success};
+    font-weight: bold;
+    margin-right: 8px;
+  }
+`;
+
+const ErrorContainer = styled.div`
+  margin-top: 16px;
+  background: linear-gradient(135deg, rgba(239, 68, 68, 0.05) 0%, rgba(220, 38, 38, 0.05) 100%);
+  border-radius: 16px;
+  padding: 20px;
+  border: 2px solid #EF4444;
+  max-width: 100%;
+`;
+
+const ErrorTitle = styled.h4`
+  margin: 0 0 12px 0;
+  color: #EF4444;
+  font-size: 16px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+
+  &::before {
+    content: '⚠️';
+    font-size: 18px;
+  }
+`;
+
+const ErrorMessage = styled.p`
+  margin: 0 0 12px 0;
+  color: ${colors.textPrimary};
+  font-size: 14px;
+  line-height: 1.6;
+`;
+
+const ErrorDetails = styled.details`
+  margin-top: 12px;
+  padding: 12px;
+  background: rgba(239, 68, 68, 0.05);
+  border-radius: 8px;
+  cursor: pointer;
+
+  summary {
+    font-weight: 600;
+    color: #DC2626;
+    font-size: 13px;
+    user-select: none;
+
+    &:hover {
+      color: #EF4444;
+    }
+  }
+
+  pre {
+    margin: 12px 0 0 0;
+    padding: 12px;
+    background: #FEF2F2;
+    border-radius: 6px;
+    overflow-x: auto;
+    font-size: 12px;
+    color: #991B1B;
+    white-space: pre-wrap;
+    word-wrap: break-word;
+  }
+`;
+
+const ChatMessage = ({ message, onSuggestionClick }) => {
   const [showData, setShowData] = useState(false);
   const [isGeneratingReport, setIsGeneratingReport] = useState(false);
 
@@ -395,8 +555,41 @@ const ChatMessage = ({ message }) => {
         {message.sender === 'assistant' && <span>🤖 Weezagent Analyst</span>}
       </MessageInfo>
 
-      {/* Show results for successful assistant responses */}
-      {message.sender === 'assistant' && message.data && !message.isError && (
+      {/* Show clarification UI for clarification responses */}
+      {message.sender === 'assistant' && message.responseType === 'clarification' && message.data && (
+        <ClarificationContainer>
+          <ClarificationTitle>I need some clarification</ClarificationTitle>
+
+          {message.data.data?.clarification_questions && message.data.data.clarification_questions.length > 0 && (
+            <>
+              <QuestionsList>
+                {message.data.data.clarification_questions.map((question, index) => (
+                  <QuestionItem key={index}>{question}</QuestionItem>
+                ))}
+              </QuestionsList>
+            </>
+          )}
+
+          {message.data.data?.suggestions && message.data.data.suggestions.length > 0 && (
+            <>
+              <SuggestionsTitle>Example queries</SuggestionsTitle>
+              <SuggestionsList>
+                {message.data.data.suggestions.map((suggestion, index) => (
+                  <SuggestionItem
+                    key={index}
+                    onClick={() => onSuggestionClick && onSuggestionClick(suggestion)}
+                  >
+                    {suggestion}
+                  </SuggestionItem>
+                ))}
+              </SuggestionsList>
+            </>
+          )}
+        </ClarificationContainer>
+      )}
+
+      {/* Show results for successful data result responses */}
+      {message.sender === 'assistant' && message.responseType === 'data_result' && message.data && !message.isError && (
         <ResultsContainer>
           <ResultsHeader>
             <ResultsTitle>
@@ -428,6 +621,20 @@ const ChatMessage = ({ message }) => {
           )}
 
         </ResultsContainer>
+      )}
+
+      {/* Show error UI for error responses */}
+      {message.isError && (
+        <ErrorContainer>
+          <ErrorTitle>Error Processing Query</ErrorTitle>
+          <ErrorMessage>{message.text}</ErrorMessage>
+          {message.data?.details && (
+            <ErrorDetails>
+              <summary>Technical Details (for debugging)</summary>
+              <pre>{typeof message.data.details === 'string' ? message.data.details : JSON.stringify(message.data.details, null, 2)}</pre>
+            </ErrorDetails>
+          )}
+        </ErrorContainer>
       )}
     </MessageContainer>
   );

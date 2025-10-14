@@ -165,15 +165,29 @@ async def process_query(request: QueryRequest):
                 print("✅ API DEBUG: QueryResponse created successfully")
                 return response
             elif result["response_type"] == "clarification":
-                return QueryResponse(
+                print("🔍 API DEBUG: Creating clarification response...")
+                llm_response = result["llm_response"]
+
+                # Extract message, questions, and suggestions
+                message = llm_response.get("message", "I need more information to process your query")
+                questions = llm_response.get("clarification_questions", [])
+                suggestions = llm_response.get("suggestions", [])
+
+                print(f"   Message: {message}")
+                print(f"   Questions: {questions}")
+                print(f"   Suggestions: {suggestions}")
+
+                response = QueryResponse(
                     success=True,
-                    description="I need more information to process your query",
+                    description=message,
                     response_type="clarification",
                     data={
-                        "clarification_questions": result["llm_response"].get("clarification_questions", []),
-                        "suggestions": result["llm_response"].get("suggestions", [])
+                        "clarification_questions": questions,
+                        "suggestions": suggestions
                     }
                 )
+                print("✅ API DEBUG: Clarification response created successfully")
+                return response
             else:
                 return QueryResponse(
                     success=False,

@@ -74,12 +74,16 @@ cubes:
         title: Refund Protection
         description: Indicates whether refund protection was purchased for the order.
         
-      - name: order_date
+      - name: order_date_raw
         sql: order_date
+        type: string
+
+      - name: order_date
+        sql: "STR_TO_DATE({CUBE}.order_date, '%m/%d/%Y')"
         type: time
         title: Order Date
-        description: Date and time when the order was placed.
-        
+        description: Date when the order was placed.
+            
     measures:
       - name: count
         type: count

@@ -209,23 +209,53 @@ function App() {
         query: text.trim()
       });
 
-      // Add assistant response
-      const assistantMessage = {
-        id: Date.now() + 1,
-        text: response.data.description || 'Query processed successfully',
-        sender: 'assistant',
-        timestamp: new Date(),
-        data: response.data
-      };
+      console.log('API Response:', response.data);
+
+      // Handle different response types
+      const responseType = response.data.response_type;
+      let assistantMessage;
+
+      if (responseType === 'clarification') {
+        // Handle clarification needed
+        assistantMessage = {
+          id: Date.now() + 1,
+          text: response.data.description || 'I need more information to process your query',
+          sender: 'assistant',
+          timestamp: new Date(),
+          responseType: 'clarification',
+          data: response.data
+        };
+      } else if (responseType === 'data_result') {
+        // Handle successful data result
+        assistantMessage = {
+          id: Date.now() + 1,
+          text: response.data.description || 'Query processed successfully',
+          sender: 'assistant',
+          timestamp: new Date(),
+          responseType: 'data_result',
+          data: response.data
+        };
+      } else {
+        // Handle other successful responses
+        assistantMessage = {
+          id: Date.now() + 1,
+          text: response.data.description || 'Query processed successfully',
+          sender: 'assistant',
+          timestamp: new Date(),
+          responseType: responseType,
+          data: response.data
+        };
+      }
 
       setMessages(prev => [...prev, assistantMessage]);
     } catch (error) {
       console.error('Error sending message:', error);
+      console.error('Error response:', error.response?.data);
 
       // Add error message
       const errorMessage = {
         id: Date.now() + 1,
-        text: 'Sorry, I encountered an error processing your request. Please try again.',
+        text: error.response?.data?.detail || 'Sorry, I encountered an error processing your request. Please try again.',
         sender: 'assistant',
         timestamp: new Date(),
         isError: true
@@ -269,7 +299,11 @@ function App() {
             </WelcomeMessage>
           ) : (
             messages.map(message => (
-              <ChatMessage key={message.id} message={message} />
+              <ChatMessage
+                key={message.id}
+                message={message}
+                onSuggestionClick={handleSendMessage}
+              />
             ))
           )}
 
