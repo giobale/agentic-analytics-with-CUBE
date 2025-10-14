@@ -19,10 +19,16 @@ cubes:
         relationship: many_to_one
     
     dimensions:
+
+      - name: order_line_id
+        sql: "CONCAT({CUBE}.order_id, '-', {CUBE}.ticket_id)"
+        type: string
+        primary_key: true
+        description: Composite primary key for (order_id, ticket_id).
+
       - name: order_id
         sql: order_id
         type: string
-        primary_key: true
         title: Order ID
         description: Unique identifier for each order.
         

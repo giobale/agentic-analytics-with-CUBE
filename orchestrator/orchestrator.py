@@ -27,6 +27,7 @@ sys.path.append(os.path.join(os.path.dirname(__file__), 'system-prompt-generator
 from conversation_manager import ConversationManager, ConversationManagerError
 from llm_client import LLMClient, LLMClientError
 from cube_client import CubeClient, CubeClientError
+from cube_query_validator import CubeQueryValidator, CubeQueryValidatorError
 
 # Import system prompt generator
 try:
@@ -47,7 +48,9 @@ class QueryOrchestrator:
                  openai_api_key: Optional[str] = None,
                  cube_base_url: str = "http://localhost:4000",
                  cube_api_secret: str = "baubeach",
-                 max_conversation_messages: int = 6):
+                 max_conversation_messages: int = 6,
+                 view_yml_path: Optional[str] = None,
+                 max_validation_retries: int = 2):
         """
         Initialize the query orchestrator.
 
@@ -56,6 +59,8 @@ class QueryOrchestrator:
             cube_base_url: CUBE API base URL
             cube_api_secret: CUBE API secret
             max_conversation_messages: Maximum conversation history to maintain
+            view_yml_path: Path to view YML file for validation (auto-detected if None)
+            max_validation_retries: Maximum retries for LLM to fix invalid parameters
         """
         # Initialize components
         self.conversation_manager = ConversationManager(max_conversation_messages)
@@ -70,6 +75,16 @@ class QueryOrchestrator:
         self.cache_dir = os.getenv("CACHE_DIR", "/app/cache")
         self.system_prompt_cache_file = os.path.join(self.cache_dir, "system_prompt.txt")
         self.system_prompt_metadata_file = os.path.join(self.cache_dir, "system_prompt_metadata.json")
+
+        # Validation configuration
+        self.max_validation_retries = max_validation_retries
+        self.view_yml_path = view_yml_path or os.path.join(
+            os.path.dirname(__file__),
+            'system-prompt-generator',
+            'my-cube-views',
+            'event_performance_overview.yml'
+        )
+        self.query_validator = None
 
         # Orchestrator state
         self.is_initialized = False
@@ -247,6 +262,32 @@ class QueryOrchestrator:
                     "error": str(e)
                 }
 
+            # Initialize query validator
+            try:
+                print(f"🔍 DEBUG: Initializing query validator with path: {self.view_yml_path}")
+                self.query_validator = CubeQueryValidator(self.view_yml_path)
+                schema_summary = self.query_validator.get_schema_summary()
+                print(f"✅ Query validator initialized successfully")
+                print(f"   Cube: {schema_summary['cube_name']}")
+                print(f"   Measures: {len(schema_summary['measures'])} ({', '.join(schema_summary['measures'][:3])}...)")
+                print(f"   Dimensions: {len(schema_summary['dimensions'])} ({', '.join(schema_summary['dimensions'][:3])}...)")
+                initialization_result["components"]["query_validator"] = {
+                    "success": True,
+                    "view_yml_path": self.view_yml_path,
+                    "schema_summary": schema_summary
+                }
+            except Exception as e:
+                print(f"❌ Query validator initialization failed: {str(e)}")
+                import traceback
+                print(f"   Traceback: {traceback.format_exc()}")
+                initialization_result["errors"].append(f"Query validator initialization failed: {str(e)}")
+                initialization_result["components"]["query_validator"] = {
+                    "success": False,
+                    "error": str(e)
+                }
+                # Don't block orchestrator initialization, continue without validator
+                self.query_validator = None
+
             # Overall success determination
             self.is_initialized = (
                 cube_init["success"] and
@@ -322,30 +363,107 @@ class QueryOrchestrator:
             response_type = llm_response.get("response_type")
 
             if response_type == "cube_query":
-                # Execute CUBE query
+                # Validate and execute CUBE query with retry logic
                 cube_query = llm_response.get("cube_query")
-                cube_result = self.cube_client.execute_query(cube_query, user_query)
 
-                processing_result["pipeline_steps"]["cube_execution"] = cube_result
+                print(f"🔍 DEBUG: Starting cube query validation and execution")
+                print(f"   Query validator available: {self.query_validator is not None}")
+                print(f"   Cube query: {json.dumps(cube_query, indent=2)}")
 
-                if cube_result["success"]:
-                    processing_result.update({
-                        "success": True,
-                        "response_type": "data_result",
-                        "llm_response": llm_response,
-                        "cube_data": cube_result["data"],
-                        "csv_filename": cube_result["csv_filename"],
-                        "csv_path": cube_result["csv_path"],
-                        "row_count": cube_result["row_count"]
-                    })
-                else:
-                    processing_result.update({
-                        "success": False,
-                        "response_type": "cube_error",
-                        "error": "CUBE query execution failed",
-                        "llm_response": llm_response,
-                        "cube_error": cube_result
-                    })
+                # Try to validate and execute query with retries
+                validation_attempts = 0
+                query_executed_successfully = False
+
+                while validation_attempts <= self.max_validation_retries and not query_executed_successfully:
+                    # Validate query parameters
+                    if self.query_validator:
+                        print(f"🔍 DEBUG: Validating query (attempt {validation_attempts + 1})...")
+                        validation_result = self.query_validator.validate_query(cube_query)
+                        processing_result["pipeline_steps"][f"validation_attempt_{validation_attempts + 1}"] = validation_result
+
+                        if not validation_result["valid"]:
+                            # Query has invalid parameters
+                            if validation_attempts < self.max_validation_retries:
+                                # Generate correction prompt for LLM
+                                correction_prompt = self.query_validator.generate_correction_prompt(
+                                    validation_result,
+                                    user_query
+                                )
+
+                                # Ask LLM to fix the query
+                                print(f"  ⚠️  Query validation failed (attempt {validation_attempts + 1}), asking LLM to correct...")
+                                retry_result = self.llm_client.process_query(
+                                    user_query=correction_prompt,
+                                    system_prompt=self.system_prompt,
+                                    conversation_messages=[]  # Fresh context for correction
+                                )
+
+                                processing_result["pipeline_steps"][f"llm_correction_attempt_{validation_attempts + 1}"] = retry_result
+
+                                if retry_result["success"] and retry_result["response"].get("response_type") == "cube_query":
+                                    # Update cube_query with corrected version
+                                    cube_query = retry_result["response"].get("cube_query")
+                                    llm_response = retry_result["response"]
+                                    validation_attempts += 1
+                                else:
+                                    # LLM failed to correct, break retry loop
+                                    break
+                            else:
+                                # Max retries reached
+                                processing_result.update({
+                                    "success": False,
+                                    "response_type": "validation_error",
+                                    "error": "Query validation failed after maximum retries",
+                                    "validation_result": validation_result,
+                                    "llm_response": llm_response
+                                })
+                                return processing_result
+                        else:
+                            # Validation passed, proceed with execution
+                            query_executed_successfully = True
+                    else:
+                        # No validator, proceed directly
+                        query_executed_successfully = True
+
+                    # Execute query if validation passed
+                    if query_executed_successfully:
+                        cube_result = self.cube_client.execute_query(cube_query, user_query)
+                        processing_result["pipeline_steps"]["cube_execution"] = cube_result
+
+                        if cube_result["success"]:
+                            processing_result.update({
+                                "success": True,
+                                "response_type": "data_result",
+                                "llm_response": llm_response,
+                                "cube_data": cube_result["data"],
+                                "csv_filename": cube_result["csv_filename"],
+                                "csv_path": cube_result["csv_path"],
+                                "row_count": cube_result["row_count"],
+                                "validation_attempts": validation_attempts + 1
+                            })
+                        else:
+                            # Check if it's a schema error that could be fixed with retry
+                            if "not found" in cube_result.get("error", "").lower():
+                                # This might be a validation issue that slipped through
+                                if validation_attempts < self.max_validation_retries:
+                                    query_executed_successfully = False
+                                    validation_attempts += 1
+                                else:
+                                    processing_result.update({
+                                        "success": False,
+                                        "response_type": "cube_error",
+                                        "error": "CUBE query execution failed",
+                                        "llm_response": llm_response,
+                                        "cube_error": cube_result
+                                    })
+                            else:
+                                processing_result.update({
+                                    "success": False,
+                                    "response_type": "cube_error",
+                                    "error": "CUBE query execution failed",
+                                    "llm_response": llm_response,
+                                    "cube_error": cube_result
+                                })
 
             elif response_type == "clarification_needed":
                 processing_result.update({

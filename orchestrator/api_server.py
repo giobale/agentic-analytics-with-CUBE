@@ -65,17 +65,39 @@ async def startup_event():
         cube_api_secret = os.getenv('CUBEJS_API_SECRET', 'baubeach')
         openai_api_key = os.getenv('OPENAI_API_KEY')
 
+        # Determine view YML path (default to event_performance_overview.yml)
+        view_yml_path = os.getenv(
+            'VIEW_YML_PATH',
+            '/app/system-prompt-generator/my-cube-views/event_performance_overview.yml'
+        )
+
+        print(f"🔍 Initializing orchestrator with validation enabled")
+        print(f"   View YML path: {view_yml_path}")
+
         orchestrator = QueryOrchestrator(
             openai_api_key=openai_api_key,
             cube_base_url=cube_base_url,
-            cube_api_secret=cube_api_secret
+            cube_api_secret=cube_api_secret,
+            view_yml_path=view_yml_path,
+            max_validation_retries=2
         )
         init_result = orchestrator.initialize()
 
         if not init_result["success"]:
-            print(f"Warning: Orchestrator initialization had issues: {init_result['errors']}")
+            print(f"⚠️  Warning: Orchestrator initialization had issues: {init_result['errors']}")
         else:
             print("✅ Orchestrator initialized successfully")
+
+            # Print validator status
+            validator_info = init_result.get("components", {}).get("query_validator", {})
+            if validator_info.get("success"):
+                schema = validator_info.get("schema_summary", {})
+                print(f"✅ Query validator enabled:")
+                print(f"   - Cube: {schema.get('cube_name')}")
+                print(f"   - Measures: {schema.get('measure_count')} available")
+                print(f"   - Dimensions: {schema.get('dimension_count')} available")
+            else:
+                print(f"⚠️  Query validator disabled: {validator_info.get('error', 'Unknown error')}")
 
     except Exception as e:
         print(f"❌ Failed to initialize orchestrator: {str(e)}")

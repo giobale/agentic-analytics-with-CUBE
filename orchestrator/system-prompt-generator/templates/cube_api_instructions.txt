@@ -58,12 +58,51 @@ Examples:
 
 ## Time Dimensions
 
+Time dimensions allow filtering and grouping by date/time fields.
+
+**CRITICAL RULES**:
+1. **Do NOT include a time field in BOTH dimensions and timeDimensions**. If you use `timeDimensions` with a `granularity`, do NOT also add that field to `dimensions`.
+   - ❌ WRONG: `"dimensions": ["FactOrders.order_date"], "timeDimensions": [{"dimension": "FactOrders.order_date", "granularity": "year"}]`
+   - ✅ CORRECT: `"dimensions": [], "timeDimensions": [{"dimension": "FactOrders.order_date", "granularity": "year"}]`
+
+2. When the user asks for data "by year", "by month", "by day", etc., use `timeDimensions` with the appropriate `granularity` and omit `dateRange` to get all available data.
+
+**IMPORTANT**: The `dateRange` field accepts ONLY these formats:
+1. **Specific date range (array)**: `["2024-01-01", "2024-12-31"]` - dates in YYYY-MM-DD format
+2. **Relative date range (string)**: Use these EXACT strings only:
+   - `"Today"`
+   - `"Yesterday"`
+   - `"This week"`
+   - `"This month"`
+   - `"This quarter"`
+   - `"This year"`
+   - `"Last 7 days"`
+   - `"Last 30 days"`
+   - `"Last week"`
+   - `"Last month"`
+   - `"Last quarter"`
+   - `"Last year"`
+3. **No date filter (omit timeDimensions entirely)**: If the user asks for "all time" or doesn't specify a date range, simply don't include the `timeDimensions` field in the query.
+
+**DO NOT** use custom strings like "all time", "All time", "past month", "january 2020", etc. Always convert user queries to one of the valid formats above, or omit timeDimensions entirely for "all time" queries.
+
+Examples:
 ```json
 "timeDimensions": [
   {
     "dimension": "ViewName.date_field",
-    "granularity": "day|week|month|quarter|year",
+    "granularity": "day",
     "dateRange": ["2024-01-01", "2024-12-31"]
+  }
+]
+```
+
+```json
+"timeDimensions": [
+  {
+    "dimension": "ViewName.date_field",
+    "granularity": "month",
+    "dateRange": "Last month"
   }
 ]
 ```
@@ -92,10 +131,25 @@ Examples:
 ```json
 {
   "measures": ["EventPerformanceOverview.total_order_value"],
+  "dimensions": [],
   "timeDimensions": [
     {
       "dimension": "EventPerformanceOverview.start_date",
       "granularity": "month"
+    }
+  ]
+}
+```
+
+### Tickets Sold by Year (no dateRange to get all years)
+```json
+{
+  "measures": ["FactOrders.tickets_sold"],
+  "dimensions": [],
+  "timeDimensions": [
+    {
+      "dimension": "FactOrders.order_date",
+      "granularity": "year"
     }
   ]
 }

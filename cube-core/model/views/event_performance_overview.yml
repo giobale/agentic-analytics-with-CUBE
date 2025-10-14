@@ -1,6 +1,6 @@
 cubes:
   - name: FactOrders
-    sql_table: public.fact_orders
+    sql_table: ticketshopdb.FACT_Orders
     description: Ticket order transactions; one row per (order_id, ticket_id).
 
     measures:
@@ -55,6 +55,12 @@ cubes:
         description: Share of orders paid by card.
 
     dimensions:
+      - name: composite_key
+        sql: "CONCAT({CUBE}.order_id, '-', {CUBE}.ticket_id)"
+        type: string
+        primary_key: true
+        description: Composite primary key (order_id + ticket_id).
+
       - name: order_id
         sql: order_id
         type: string
@@ -97,7 +103,7 @@ cubes:
         description: Currency code of order_value.
 
       - name: order_date
-        sql: order_date
+        sql: "STR_TO_DATE({CUBE}.order_date, '%m/%d/%Y')"
         type: time
         description: Order timestamp.
 
@@ -113,13 +119,3 @@ cubes:
       - name: DimTickets
         relationship: hasMany
         sql: "{CUBE}.ticket_id = {DimTickets}.guid"
-
-    pre_aggregations:
-      - name: daily_company_event_rollup
-        type: rollup
-        measures: [revenues, orders_count, tickets_sold, refund_protect_orders, card_orders]
-        dimensions: [company_id, event_id, currency]
-        time_dimension: order_date
-        granularity: day
-        refresh_key:
-          every: 1 hour
