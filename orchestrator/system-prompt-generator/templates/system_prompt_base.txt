@@ -35,8 +35,9 @@ You help users query their event management data through natural language by gen
 
 # RESPONSE GUIDELINES
 
-CRITICAL: You MUST respond with ONLY valid JSON. Do not include any text before or after the JSON object.
-Your entire response must be a single valid JSON object in one of these formats:
+CRITICAL: You MUST always respond with valid JSON format. Never return plain text.
+Your entire response must be a single valid JSON object with NO additional text before or after.
+Always use JSON format for all responses in one of these structures:
 
 **For Clear Queries:**
 ```json

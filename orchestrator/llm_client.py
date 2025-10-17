@@ -11,6 +11,8 @@ try:
 except ImportError:
     openai = None
 
+from response_models import get_response_schema
+
 
 class LLMClient:
     """
@@ -18,13 +20,13 @@ class LLMClient:
     Converts user questions to CUBE API queries using system prompts.
     """
 
-    def __init__(self, api_key: Optional[str] = None, model: str = "gpt-4"):
+    def __init__(self, api_key: Optional[str] = None, model: str = "gpt-4o"):
         """
         Initialize LLM client.
 
         Args:
             api_key: OpenAI API key (defaults to OPENAI_API_KEY env var)
-            model: OpenAI model to use (default: gpt-4)
+            model: OpenAI model to use (default: gpt-4o supports json_object mode)
         """
         if openai is None:
             raise LLMClientError("OpenAI package not installed. Install with: pip install openai")
@@ -35,6 +37,9 @@ class LLMClient:
 
         self.model = model
         self.client = openai.OpenAI(api_key=self.api_key)
+
+        # Get the response schema for structured outputs
+        self.response_schema = get_response_schema()
 
     def process_query(self,
                      user_query: str,
@@ -64,15 +69,16 @@ class LLMClient:
             print(f"   User query: {user_query}")
             print(f"   System prompt length: {len(messages[0]['content']) if messages and messages[0]['role'] == 'system' else 'No system message'}")
 
-            # Call OpenAI API - use regular format since JSON format has compatibility issues
-            print("🔍 DEBUG: Calling OpenAI API with regular format...")
+            # Call OpenAI API with JSON mode for guaranteed JSON format
+            print("🔍 DEBUG: Calling OpenAI API with JSON mode (json_object)...")
             response = self.client.chat.completions.create(
                 model=self.model,
                 messages=messages,
                 temperature=0.1,  # Low temperature for consistent responses
-                max_tokens=2000
+                max_tokens=2000,
+                response_format={"type": "json_object"}
             )
-            print("✅ DEBUG: API call successful")
+            print("✅ DEBUG: API call successful with guaranteed JSON output")
 
             # Extract and parse response
             response_content = response.choices[0].message.content
@@ -121,13 +127,14 @@ class LLMClient:
         Returns:
             Normalized response dictionary
         """
+        # Handle both "type" and "response_type" fields (LLM may return either)
+        response_type = llm_response.get("response_type") or llm_response.get("type", "error")
+
         # Expected format based on your specification
         normalized = {
-            "response_type": llm_response.get("response_type", "error"),
+            "response_type": response_type,
             "confidence_score": llm_response.get("confidence_score", 0.5)
         }
-
-        response_type = normalized["response_type"]
 
         if response_type == "cube_query":
             normalized.update({
@@ -141,14 +148,18 @@ class LLMClient:
                 return self._create_error_response("Invalid cube query: missing measures and dimensions", user_query)
 
         elif response_type == "clarification_needed":
+            # Handle both "questions" and "clarification_questions" fields
+            questions = llm_response.get("clarification_questions") or llm_response.get("questions", [])
+
             normalized.update({
-                "clarification_questions": llm_response.get("clarification_questions", []),
-                "suggestions": llm_response.get("suggestions", [])
+                "clarification_questions": questions,
+                "suggestions": llm_response.get("suggestions", []),
+                "message": llm_response.get("message", "I need more information to process your query")
             })
 
         elif response_type == "error":
             normalized.update({
-                "description": llm_response.get("description", "An error occurred processing your query")
+                "description": llm_response.get("description") or llm_response.get("message", "An error occurred processing your query")
             })
 
         else:

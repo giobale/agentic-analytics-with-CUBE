@@ -139,11 +139,22 @@ class CubeClient:
                     "original_query": cube_query
                 }
 
+        except requests.exceptions.HTTPError as e:
+            # Extract meaningful error from CUBE API response
+            error_details = self._extract_cube_error(e.response)
+            return {
+                "success": False,
+                "error": error_details["user_message"],
+                "details": error_details["technical_details"],
+                "error_type": error_details["error_type"],
+                "original_query": cube_query
+            }
         except requests.exceptions.RequestException as e:
             return {
                 "success": False,
-                "error": f"API request failed: {str(e)}",
-                "details": "Failed to communicate with CUBE API",
+                "error": "Failed to connect to CUBE API",
+                "details": f"Network error: {str(e)}",
+                "error_type": "network_error",
                 "original_query": cube_query
             }
         except Exception as e:
@@ -151,6 +162,7 @@ class CubeClient:
                 "success": False,
                 "error": f"Query execution failed: {str(e)}",
                 "details": "Unexpected error during query execution",
+                "error_type": "unexpected_error",
                 "original_query": cube_query
             }
 
@@ -336,6 +348,63 @@ class CubeClient:
             df.to_csv(csv_path, index=False)
 
         return filename
+
+    def _extract_cube_error(self, response) -> Dict[str, str]:
+        """
+        Extract meaningful error messages from CUBE API error responses.
+
+        Args:
+            response: HTTP response object from failed request
+
+        Returns:
+            Dictionary with user_message, technical_details, and error_type
+        """
+        try:
+            error_data = response.json()
+            error_message = error_data.get("error", str(response.text))
+
+            # Check for schema compilation errors
+            if "Compile errors" in error_message:
+                # Extract the specific error from the stack trace
+                if "primary key" in error_message.lower():
+                    return {
+                        "user_message": "Database schema configuration error: Missing primary key definition",
+                        "technical_details": "The CUBE schema requires a primary key to be defined when joins are used. Please contact support.",
+                        "error_type": "schema_error"
+                    }
+                else:
+                    # Extract first line of error for user message
+                    error_lines = error_message.split('\n')
+                    first_error = error_lines[1] if len(error_lines) > 1 else error_lines[0]
+                    return {
+                        "user_message": f"Data model error: {first_error.strip()}",
+                        "technical_details": error_message,
+                        "error_type": "schema_error"
+                    }
+
+            # Check for query validation errors
+            elif "Query" in error_message or "invalid" in error_message.lower():
+                return {
+                    "user_message": "Invalid query format. Please rephrase your question.",
+                    "technical_details": error_message,
+                    "error_type": "validation_error"
+                }
+
+            # Generic API error
+            else:
+                return {
+                    "user_message": "An error occurred while processing your query",
+                    "technical_details": error_message,
+                    "error_type": "api_error"
+                }
+
+        except Exception:
+            # Fallback if response is not JSON
+            return {
+                "user_message": "An unexpected error occurred",
+                "technical_details": str(response.text) if hasattr(response, 'text') else "Unknown error",
+                "error_type": "unknown_error"
+            }
 
     def get_connection_status(self) -> Dict[str, Any]:
         """
