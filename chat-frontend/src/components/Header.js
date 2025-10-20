@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import styled from 'styled-components';
 
 const colors = {
@@ -107,7 +107,101 @@ const StatusIndicator = styled.div`
   }
 `;
 
+const RefreshButton = styled.button`
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 16px;
+  background: rgba(255, 255, 255, 0.15);
+  color: ${colors.white};
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  border-radius: 20px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  backdrop-filter: blur(10px);
+
+  &:hover {
+    background: rgba(255, 255, 255, 0.25);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  }
+
+  &:active {
+    transform: translateY(0);
+  }
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    transform: none;
+  }
+
+  .refresh-icon {
+    display: inline-block;
+    transition: transform 0.3s ease;
+  }
+
+  &:disabled .refresh-icon {
+    animation: spin 1s linear infinite;
+  }
+
+  @keyframes spin {
+    from {
+      transform: rotate(0deg);
+    }
+    to {
+      transform: rotate(360deg);
+    }
+  }
+`;
+
+const HeaderActions = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 12px;
+`;
+
 const Header = () => {
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const [refreshMessage, setRefreshMessage] = useState('');
+
+  const handleRefreshMetadata = async () => {
+    setIsRefreshing(true);
+    setRefreshMessage('');
+
+    try {
+      const orchestratorUrl = process.env.REACT_APP_ORCHESTRATOR_URL || 'http://localhost:8080';
+      const response = await fetch(`${orchestratorUrl}/refresh-metadata`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        console.log('Metadata refreshed:', data);
+        setRefreshMessage('✅ Context refreshed!');
+
+        // Clear success message after 3 seconds
+        setTimeout(() => setRefreshMessage(''), 3000);
+      } else {
+        const errorData = await response.json();
+        console.error('Refresh failed:', errorData);
+        setRefreshMessage('❌ Refresh failed');
+        setTimeout(() => setRefreshMessage(''), 3000);
+      }
+    } catch (error) {
+      console.error('Error refreshing metadata:', error);
+      setRefreshMessage('❌ Connection error');
+      setTimeout(() => setRefreshMessage(''), 3000);
+    } finally {
+      setIsRefreshing(false);
+    }
+  };
+
   return (
     <HeaderContainer>
       <HeaderContent>
@@ -118,10 +212,20 @@ const Header = () => {
           </Title>
           <Subtitle>🎯 Smart Event Analytics for Better Decisions</Subtitle>
         </div>
-        <StatusIndicator>
-          <div className="status-dot"></div>
-          🟢 AI Ready
-        </StatusIndicator>
+        <HeaderActions>
+          <RefreshButton
+            onClick={handleRefreshMetadata}
+            disabled={isRefreshing}
+            title="Refresh Cube metadata and system context"
+          >
+            <span className="refresh-icon">🔄</span>
+            {isRefreshing ? 'Refreshing...' : refreshMessage || 'Refresh Context'}
+          </RefreshButton>
+          <StatusIndicator>
+            <div className="status-dot"></div>
+            🟢 AI Ready
+          </StatusIndicator>
+        </HeaderActions>
       </HeaderContent>
     </HeaderContainer>
   );

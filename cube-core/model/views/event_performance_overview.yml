@@ -1,121 +1,39 @@
-cubes:
-  - name: FactOrders
-    sql_table: ticketshopdb.FACT_Orders
-    description: Ticket order transactions; one row per (order_id, ticket_id).
+views:
+  - name: EventPerformanceOverview
+    title: Event Performance Overview
+    description: KPIs and attributes to analyze orders, revenue, tickets, payments, and risk at event/shop level.
 
-    measures:
-      - name: orders_count
-        type: countDistinct
-        sql: order_id
-        description: Unique orders (distinct order_id).
-        drill_members: [order_id, email, order_date]
+    cubes:
+      # Root fact + core measures/dimensions
+      - join_path: FactOrders
+        includes:
+          # Measures
+          - revenues
+          - tickets_sold
+          - events_count
+          - tickets_count
+          - avg_revenue_per_event
+          - orders_count
+          - transactions_count
+          - avg_order_value
+          - avg_tickets_per_order
+          - refund_protect_attach_rate
+          - card_orders_share
+          # Dimensions
+          - order_date
+          - event_id
+          - shop_id
+          - company_id
+          - currency
+          - payment_method
 
-      - name: transactions_count
-        type: count
-        description: Transaction rows (Unique key:order_id + ticket_id).
+      # Event attributes
+      - join_path: FactOrders.DimEvents
+        includes:
+          - event_name
+          - genre
 
-      - name: revenues
-        sql: order_value
-        type: sum
-        description: Gross merchandise value (sum of order_value in source currency).
-
-      - name: tickets_sold
-        sql: ticket_count
-        type: sum
-        description: Total tickets sold (sum of ticket_count).
-
-      - name: avg_order_value
-        type: number
-        sql: "{revenues} / NULLIF({orders_count}, 0)"
-        description: Revenues divided by unique orders.
-
-      - name: avg_tickets_per_order
-        type: number
-        sql: "{tickets_sold} / NULLIF({orders_count}, 0)"
-        description: Tickets per unique order.
-
-      - name: refund_protect_orders
-        type: sum
-        sql: "CASE WHEN {CUBE}.refund_protect IN (1, true, 'true') THEN 1 ELSE 0 END"
-        description: Orders with refund protect flag set (row-level).
-
-      - name: refund_protect_attach_rate
-        type: number
-        sql: "{refund_protect_orders} / NULLIF({orders_count}, 0)"
-        description: percentage of orders with refund protection.
-
-      - name: card_orders
-        type: sum
-        sql: "CASE WHEN {CUBE}.payment_method = 'Credit Card' THEN 1 ELSE 0 END"
-        description: Count of orders paid by Credit Card.
-
-      - name: card_orders_share
-        type: number
-        sql: "{card_orders} / NULLIF({orders_count}, 0)"
-        description: Share of orders paid by card.
-
-    dimensions:
-      - name: composite_key
-        sql: "CONCAT({CUBE}.order_id, '-', {CUBE}.ticket_id)"
-        type: string
-        primary_key: true
-        description: Composite primary key (order_id + ticket_id).
-
-      - name: order_id
-        sql: order_id
-        type: string
-        primary_key: false
-        description: Business order identifier.
-
-      - name: ticket_id
-        sql: ticket_id
-        type: string
-        description: Ticket identifier within an order.
-
-      - name: email
-        sql: email
-        type: string
-        description: Buyer email (PII—use carefully).
-
-      - name: company_id
-        sql: company_id
-        type: string
-        description: Organizer (company) id.
-
-      - name: shop_id
-        sql: shop_id
-        type: string
-        description: Shop id (sales channel).
-
-      - name: event_id
-        sql: event_id
-        type: string
-        description: Event id.
-
-      - name: payment_method
-        sql: payment_method
-        type: string
-        description: Payment method label.
-
-      - name: currency
-        sql: currency
-        type: string
-        description: Currency code of order_value.
-
-      - name: order_date
-        sql: "STR_TO_DATE({CUBE}.order_date, '%m/%d/%Y')"
-        type: time
-        description: Order timestamp.
-
-    joins:
-      - name: DimEvents
-        relationship: belongsTo
-        sql: "{CUBE}.event_id = {DimEvents}.guid"
-
-      - name: DimShops
-        relationship: belongsTo
-        sql: "{CUBE}.shop_id = {DimShops}.guid"
-
-      - name: DimTickets
-        relationship: hasMany
-        sql: "{CUBE}.ticket_id = {DimTickets}.guid"
+      # Ticket attributes (kept minimal)
+      - join_path: FactOrders.DimTickets
+        includes:
+          - ticket_name

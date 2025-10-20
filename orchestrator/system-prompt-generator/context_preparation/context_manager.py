@@ -1,5 +1,6 @@
 # ABOUTME: Main orchestrator for LLM integration context preparation
 # ABOUTME: Coordinates YML parsing, business config, and prompt building for OpenAI API calls
+# ABOUTME: Supports both dynamic Cube metadata fetching and static YAML fallback
 
 from typing import Dict, List, Optional, Any
 import os
@@ -24,14 +25,18 @@ class ContextManager:
     """
     Main orchestrator for generating system prompts for LLM integration.
     Coordinates all context preparation components to build comprehensive prompts.
+    Supports both dynamic Cube metadata fetching and static YAML fallback.
     """
 
-    def __init__(self, base_path: Optional[str] = None):
+    def __init__(self,
+                 base_path: Optional[str] = None,
+                 cube_metadata_fetcher: Optional[Any] = None):
         """
         Initialize the context manager with base path configuration.
 
         Args:
             base_path: Base directory path for the llm-integration folder
+            cube_metadata_fetcher: Optional CubeMetadataFetcher instance for dynamic metadata
         """
         if base_path is None:
             base_path = Path(__file__).parent.parent
@@ -47,6 +52,10 @@ class ContextManager:
         self.example_manager = ExampleManager(str(self.templates_path / "examples"))
         self.prompt_builder = PromptBuilder(str(self.templates_path))
         self.file_loader = FileLoader()
+
+        # Dynamic metadata support
+        self.cube_metadata_fetcher = cube_metadata_fetcher
+        self.use_dynamic_metadata = cube_metadata_fetcher is not None
 
     def generate_system_prompt(self, user_query_context: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
         """
@@ -91,7 +100,75 @@ class ContextManager:
 
     def _parse_cube_views(self) -> List[Dict[str, Any]]:
         """
-        Parse all YML files in the my-cube-views directory.
+        Parse cube views from either dynamic Cube metadata or static YML files.
+
+        Returns:
+            List of parsed view specifications
+        """
+        # Try dynamic metadata first if available
+        if self.use_dynamic_metadata and self.cube_metadata_fetcher:
+            try:
+                view_specifications = self._fetch_dynamic_cube_views()
+                if view_specifications:
+                    print(f"✅ Loaded {len(view_specifications)} views from Cube metadata API")
+                    return view_specifications
+                else:
+                    print("⚠️  No views found in Cube metadata, falling back to YAML files")
+            except Exception as e:
+                print(f"⚠️  Failed to fetch dynamic metadata: {str(e)}, falling back to YAML files")
+
+        # Fallback to static YAML parsing
+        return self._parse_static_yaml_views()
+
+    def _fetch_dynamic_cube_views(self) -> List[Dict[str, Any]]:
+        """
+        Fetch view specifications from Cube metadata API.
+
+        Returns:
+            List of view specifications in the same format as YAML parser
+        """
+        view_specifications = []
+
+        # Get all views metadata
+        all_views_result = self.cube_metadata_fetcher.get_all_views_metadata()
+
+        if not all_views_result.get('success'):
+            raise ContextManagerError(f"Failed to fetch views metadata: {all_views_result.get('error')}")
+
+        # Convert Cube metadata format to view specification format
+        for view_data in all_views_result.get('views', []):
+            view_spec = {
+                'name': view_data.get('view'),
+                'title': view_data.get('title', view_data.get('view')),
+                'description': view_data.get('description', ''),
+                'type': view_data.get('type', 'cube'),
+                'measures': [],
+                'dimensions': []
+            }
+
+            # Add measures with descriptions
+            for measure in view_data.get('measures', []):
+                view_spec['measures'].append({
+                    'name': measure.get('name'),
+                    'title': measure.get('title', measure.get('name')),
+                    'description': measure.get('description', '')
+                })
+
+            # Add dimensions with descriptions
+            for dimension in view_data.get('dimensions', []):
+                view_spec['dimensions'].append({
+                    'name': dimension.get('name'),
+                    'title': dimension.get('title', dimension.get('name')),
+                    'description': dimension.get('description', '')
+                })
+
+            view_specifications.append(view_spec)
+
+        return view_specifications
+
+    def _parse_static_yaml_views(self) -> List[Dict[str, Any]]:
+        """
+        Parse all YML files in the my-cube-views directory (legacy/fallback).
 
         Returns:
             List of parsed view specifications

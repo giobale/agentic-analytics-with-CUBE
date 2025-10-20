@@ -1,5 +1,5 @@
 # ABOUTME: Validator for Cube.js queries against cube/view schemas
-# ABOUTME: Parses view YML files and validates that query parameters exist in the schema
+# ABOUTME: Supports both static YML files and dynamic Cube metadata API schemas
 
 import yaml
 from typing import Dict, List, Any, Optional, Set
@@ -10,24 +10,39 @@ class CubeQueryValidator:
     """
     Validates Cube.js queries against cube/view schemas.
     Ensures all measures, dimensions, and other parameters exist in the schema.
+    Supports both static YML files and dynamic metadata from Cube API.
     """
 
-    def __init__(self, view_yml_path: str):
+    def __init__(self, view_yml_path: Optional[str] = None, metadata_dict: Optional[Dict[str, Any]] = None):
         """
-        Initialize validator with a view YML file.
+        Initialize validator with either a view YML file or metadata dictionary.
 
         Args:
-            view_yml_path: Path to the cube view YML file
+            view_yml_path: Path to the cube view YML file (static mode)
+            metadata_dict: Metadata dictionary from Cube API (dynamic mode)
         """
+        if view_yml_path is None and metadata_dict is None:
+            raise CubeQueryValidatorError("Must provide either view_yml_path or metadata_dict")
+
         self.view_yml_path = view_yml_path
-        self.schema = self._load_schema()
+        self.metadata_dict = metadata_dict
+        self.use_dynamic_metadata = metadata_dict is not None
+
+        if self.use_dynamic_metadata:
+            self.schema = metadata_dict
+        else:
+            self.schema = self._load_schema()
+
         self.cube_name = self._extract_cube_name()
         self.available_measures = self._extract_measures()
         self.available_dimensions = self._extract_dimensions()
         self.available_time_dimensions = self._extract_time_dimensions()
 
     def _load_schema(self) -> Dict[str, Any]:
-        """Load and parse the YML schema file."""
+        """Load and parse the YML schema file (static mode only)."""
+        if not self.view_yml_path:
+            return {}
+
         try:
             with open(self.view_yml_path, 'r', encoding='utf-8') as f:
                 content = yaml.safe_load(f)

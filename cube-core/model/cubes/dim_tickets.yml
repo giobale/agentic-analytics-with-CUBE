@@ -2,76 +2,161 @@ cubes:
   - name: DimTickets
     sql_table: ticketshopdb.`DIM_Tickets`
     data_source: default
-    
-    joins: []
-    
+
     dimensions:
       - name: guid
         sql: guid
         type: string
         primary_key: true
-        
+        title: Ticket GUID
+        description: Unique identifier of the ticket in the source system.
+
       - name: event_id
         sql: event_id
         type: string
-        
+        title: Event ID
+        description: Identifier of the event this ticket belongs to.
+
       - name: company_id
         sql: company_id
         type: string
-        
-      - name: name
+        title: Company ID
+        description: Identifier of the organizing company for the ticket.
+
+      - name: ticket_name
         sql: name
         type: string
-        
-      - name: description
+        title: Ticket Name
+        description: Public-facing name of the ticket type (e.g., Early Bird, VIP).
+
+      - name: description_value
         sql: description
-        type: string
-        
+        type: number
+        title: Description (Numeric)
+        description: Numeric field named 'description' in the source; retained for completeness.
+
+      - name: ticket_price
+        sql: "CAST({CUBE}.min_price AS DECIMAL(18,4))"
+        type: number
+        title: Ticket Price
+        description: Base ticket price (cast from string to numeric for calculations).
+
       - name: currency
         sql: currency
         type: string
-        
+        title: Ticket Currency
+        description: ISO currency code for the ticket price.
+
+      - name: status_overrule
+        sql: status_overrule
+        type: boolean
+        title: Status Overrule
+        description: Flag indicating a manual override of the ticket’s status.
+
+      - name: increment
+        sql: increment
+        type: string
+        title: Purchase Increment
+        description: Step increment or bundle size for purchases as provided by the source.
+
+      - name: late_personalization
+        sql: late_personalization
+        type: boolean
+        title: Late Personalization
+        description: Whether attendee personalization can occur after purchase.
+
+      - name: max_orderable_amount_per_order
+        sql: max_orderable_amount_per_order
+        type: number
+        title: Max Quantity Per Order
+        description: Maximum quantity of this ticket allowed per order.
+
+      - name: available_stock
+        sql: available_stock
+        type: number
+        title: Available Stock
+        description: Current available inventory for this ticket type.
+
+      - name: sold_count
+        sql: sold_count
+        type: number
+        title: Sold Count
+        description: Total units sold for this ticket type.
+
       - name: is_soldout
         sql: is_soldout
         type: boolean
-        
-      - name: created_at
-        sql: created_at
-        type: time
-        
+        title: Is Sold Out
+        description: Indicates if the ticket type is currently sold out.
+
       - name: available_from
-        sql: available_from
+        sql: "STR_TO_DATE({CUBE}.available_from, '%m/%d/%Y')"
         type: time
-        
+        title: Available From
+        description: Start date/time when the ticket becomes available for sale.
+
       - name: available_until
-        sql: available_until
+        sql: "STR_TO_DATE({CUBE}.available_until, '%m/%d/%Y')"
         type: time
-        
+        title: Available Until
+        description: End date/time when the ticket is no longer available for sale.
+
+      - name: days_in_ticket
+        sql: days_in_ticket
+        type: number
+        title: Days In Ticket
+        description: Number of event days covered by this ticket (if applicable).
+
+      - name: is_day
+        sql: is_day
+        type: boolean
+        title: Is Single Day
+        description: True if this ticket is a single-day ticket.
+
+      - name: planned_ticket
+        sql: planned_ticket
+        type: boolean
+        title: Planned Ticket
+        description: Flag for planned/placeholder ticket types not yet on sale.
+
+      - name: is_strategic
+        sql: is_strategic
+        type: boolean
+        title: Is Strategic
+        description: Business flag marking a strategic ticket type (e.g., for pricing tests).
+
+      - name: created_at
+        sql: "STR_TO_DATE({CUBE}.created_at, '%m/%d/%Y')"
+        type: time
+        title: Created At
+        description: Timestamp when the ticket was created in the source.
+
+      - name: inserted_at
+        sql: "STR_TO_DATE({CUBE}.inserted_at, '%m/%d/%Y')"
+        type: time
+        title: Inserted At
+        description: Timestamp when the record was inserted into the warehouse.
+
     measures:
       - name: count
         type: count
         title: Ticket Count
-        
-      - name: min_price_total
-        sql: min_price
-        type: sum
-        title: Total Min Price
-        
-      - name: available_stock_total
-        sql: available_stock
-        type: sum
-        title: Available Stock
-        
-      - name: sold_count_total
-        sql: sold_count
-        type: sum
-        title: Sold Count
-        
-      - name: avg_min_price
-        sql: min_price
-        type: avg
-        title: Average Min Price
+        description: Number of ticket records.
 
-    pre_aggregations:
-      # Pre-aggregation definitions go here.
-      # Learn more in the documentation: https://cube.dev/docs/caching/pre-aggregations/getting-started
+      - name: avg_ticket_price
+        type: avg
+        sql: ticket_price
+        title: Average Ticket Price
+        description: Average of the base ticket price across selected tickets.
+
+      - name: available_stock_total
+        type: sum
+        sql: available_stock
+        title: Available Stock (Total)
+        description: Total available inventory across selected ticket types.
+
+      - name: sold_count_total
+        type: sum
+        sql: sold_count
+        title: Sold Count (Total)
+        description: Total units sold across selected ticket types.

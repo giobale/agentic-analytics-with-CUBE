@@ -299,6 +299,41 @@ async def get_status():
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error getting status: {str(e)}")
 
+@app.post("/refresh-metadata")
+async def refresh_metadata():
+    """
+    Refresh Cube metadata from API and regenerate system prompt.
+    This endpoint is triggered manually by the user via frontend button.
+    """
+    if not orchestrator:
+        raise HTTPException(status_code=503, detail="Orchestrator not initialized")
+
+    try:
+        print("🔄 API: Metadata refresh requested")
+        result = orchestrator.refresh_cube_metadata()
+
+        if result["success"]:
+            print(f"✅ API: Metadata refreshed successfully")
+            return {
+                "success": True,
+                "message": "Cube metadata refreshed successfully",
+                "metadata_summary": result.get("metadata_summary"),
+                "system_prompt_metadata": result.get("system_prompt_metadata"),
+                "timestamp": result.get("timestamp")
+            }
+        else:
+            print(f"❌ API: Metadata refresh failed: {result.get('error')}")
+            raise HTTPException(
+                status_code=500,
+                detail=result.get("error", "Failed to refresh metadata")
+            )
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"❌ API: Exception during metadata refresh: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Error refreshing metadata: {str(e)}")
+
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(app, host="0.0.0.0", port=8080)

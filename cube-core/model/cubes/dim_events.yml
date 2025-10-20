@@ -2,70 +2,160 @@ cubes:
   - name: DimEvents
     sql_table: ticketshopdb.`DIM_Events`
     data_source: default
-    
-    joins: []
-    
+
     dimensions:
       - name: guid
         sql: guid
         type: string
         primary_key: true
-        
+        title: Event GUID
+        description: Unique identifier for the event in the source system.
+
       - name: company_id
         sql: company_id
         type: string
-        
-      - name: name
+        title: Company ID
+        description: Identifier for the company organizing the event.
+
+      # alias -> rename the dimension
+      - name: event_name
         sql: name
         type: string
-        
-      - name: description
+        title: Event Name
+        description: Public-facing name of the event.
+
+      # Source column is DECIMAL; keep as numeric auxiliary field
+      - name: event_description_value
         sql: description
-        type: string
-        
-      - name: dash_category
+        type: number
+        title: Event Description (Numeric)
+        description: Numeric field named 'description' in source; retained for completeness.
+
+      # alias -> rename the dimension
+      - name: category
         sql: dash_category
         type: string
-        
+        title: Event Category
+        description: High-level category used in the dashboard (e.g., Festival, Club Night).
+
+      - name: dash_subcategories
+        sql: dash_subcategories
+        type: string
+        title: Event Subcategories
+        description: Secondary taxonomy tags used for finer segmentation.
+
+      # DECIMAL in DDL; expose as number (often 0/1)
+      - name: is_repeating_value
+        sql: is_repeating
+        type: number
+        title: Is Repeating (Numeric)
+        description: Numeric indicator for repeating events as provided by the source.
+
       - name: status
         sql: status
         type: string
-        
+        title: Event Status
+        description: Operational status (e.g., active, cancelled).
+
+      - name: segment_id
+        sql: segment_id
+        type: number
+        title: Segment ID
+        description: Numeric identifier of the event’s segment (if maintained upstream).
+
+      - name: location_id
+        sql: location_id
+        type: string
+        title: Location ID
+        description: Identifier of the venue/location associated with the event.
+
       - name: locale
         sql: locale
         type: string
-        
+        title: Locale
+        description: Locale string for the event (e.g., en_US, it_IT).
+
       - name: currency
         sql: currency
         type: string
-        
+        title: Event Currency
+        description: ISO currency code used for pricing and reporting.
+
+      - name: genre
+        sql: genre
+        type: string
+        title: Event Genre
+        description: Event genre label (e.g., Techno, Pop).
+
       - name: start_date
-        sql: start_date
+        sql: "STR_TO_DATE({CUBE}.start_date, '%m/%d/%Y')"
         type: time
-        
+        title: Event Start Date
+        description: Start date of the event (parsed from string).
+
       - name: end_date
-        sql: end_date
+        sql: "STR_TO_DATE({CUBE}.end_date, '%m/%d/%Y')"
         type: time
-        
+        title: Event End Date
+        description: End date of the event (parsed from string).
+
+      - name: season
+        sql: season
+        type: string
+        title: Season
+        description: Season label used for grouping (e.g., Summer 2025).
+
+      - name: gui_mode
+        sql: gui_mode
+        type: string
+        title: GUI Mode
+        description: UI mode flag as provided by the source system.
+
+      - name: is_sealed
+        sql: is_sealed
+        type: boolean
+        title: Is Sealed
+        description: Indicates whether the event is sealed/locked in the source.
+
+      - name: days_in_event
+        sql: days_in_event
+        type: number
+        title: Days In Event
+        description: Total number of scheduled days for the event.
+
+      - name: total_capacity
+        sql: total_capacity
+        type: number
+        title: Total Capacity
+        description: Aggregate capacity across all days/areas (if provided).
+
+      # Clean '%' and cast for numeric analytics (0–100)
+      - name: sold_percentage_value
+        sql: "CAST(REPLACE({CUBE}.sold_percentage, '%', '') AS DECIMAL(6,2))"
+        type: number
+        title: Sold Percentage (0–100)
+        description: Percentage of capacity sold; '%' stripped and cast to numeric.
+
       - name: created_at
-        sql: created_at
+        sql: "STR_TO_DATE({CUBE}.created_at, '%m/%d/%Y')"
         type: time
-        
+        title: Created At
+        description: Timestamp when the event was created in the source (parsed).
+
+      - name: inserted_at
+        sql: "STR_TO_DATE({CUBE}.inserted_at, '%m/%d/%Y')"
+        type: time
+        title: Inserted At
+        description: Timestamp when the record was inserted into the warehouse (parsed).
+
     measures:
       - name: count
         type: count
         title: Event Count
-        
-      - name: total_capacity
-        sql: total_capacity
-        type: sum
-        title: Total Capacity
-        
-      - name: avg_sold_percentage
-        sql: sold_percentage
-        type: avg
-        title: Average Sold Percentage
+        description: Number of event records.
 
-    pre_aggregations:
-      # Pre-aggregation definitions go here.
-      # Learn more in the documentation: https://cube.dev/docs/caching/pre-aggregations/getting-started
+      - name: avg_sold_percentage
+        type: avg
+        sql: sold_percentage_value
+        title: Average Sold Percentage
+        description: Average of the sold percentage across selected events.

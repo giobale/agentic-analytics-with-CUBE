@@ -91,35 +91,33 @@ cubes:
         description: Date when the order was placed.
             
     measures:
-      - name: count
-        type: count
-        title: Order Count
-        description: Total number of orders.
-        
-      - name: total_order_value
-        sql: order_value
-        type: sum
-        title: Total Order Value
-        description: Sum of the order values for all orders, so the total revenue generated from orders.
-        
-      - name: avg_order_value
-        sql: order_value
-        type: avg
-        title: Average Order Value
-        description: Average value of the orders, so the mean order revenue.
-        
-      - name: total_tickets_sold
-        sql: ticket_count
-        type: sum
-        title: Total Tickets Sold
-        description: Total number of tickets sold.
-        
-      - name: avg_tickets_per_order
-        sql: ticket_count
-        type: avg
-        title: Average Tickets per Order
-        description: Average number of tickets sold per order.
+      - name: orders_count
+        type: count_distinct
+        sql: order_id
+        description: Unique orders (distinct order_id).
+        drill_members: [order_id, email, order_date]
 
-    pre_aggregations:
-      # Pre-aggregation definitions go here.
-      # Learn more in the documentation: https://cube.dev/docs/caching/pre-aggregations/getting-started
+      - name: revenues
+        sql: order_value
+        type: sum
+        description: Gross merchandise value (sum of order_value in source currency).
+
+      - name: tickets_sold
+        sql: ticket_count
+        type: sum
+        description: Total tickets sold (sum of ticket_count).
+
+      - name: avg_order_value
+        type: number
+        sql: "{revenues} / NULLIF({orders_count}, 0)"
+        description: Revenues divided by unique orders.
+
+      - name: avg_tickets_per_order
+        type: number
+        sql: "{tickets_sold} / NULLIF({orders_count}, 0)"
+        description: Tickets per unique order.
+
+      - name: card_orders
+        type: sum
+        sql: "CASE WHEN {CUBE}.payment_method = 'Credit Card' THEN 1 ELSE 0 END"
+        description: Count of orders paid by Credit Card.

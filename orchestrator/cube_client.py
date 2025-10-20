@@ -115,6 +115,9 @@ class CubeClient:
             if 'data' in result:
                 data = result['data']
 
+                # Remove redundant time dimension columns
+                data = self._remove_redundant_time_columns(data, cube_query)
+
                 # Save to CSV
                 csv_filename = self._save_to_csv(data, cube_query, user_query)
 
@@ -288,6 +291,48 @@ class CubeClient:
             "valid": len(errors) == 0,
             "errors": errors
         }
+
+    def _remove_redundant_time_columns(self, data: List[Dict[str, Any]], cube_query: Dict[str, Any]) -> List[Dict[str, Any]]:
+        """
+        Remove redundant time dimension columns when granularity is specified.
+
+        When Cube.js processes a time dimension with granularity (e.g., month, day, year),
+        it returns both the granularized column (e.g., 'ViewName.order_date.month') and
+        the original time dimension (e.g., 'ViewName.order_date'). This creates redundancy.
+
+        This method identifies and removes the base time dimension column when a granularized
+        version exists, keeping only the more specific granularized column.
+
+        Args:
+            data: Query result data from Cube.js
+            cube_query: Original cube query with timeDimensions
+
+        Returns:
+            Cleaned data with redundant time columns removed
+        """
+        if not data or not cube_query.get('timeDimensions'):
+            return data
+
+        columns_to_remove = set()
+
+        # Identify redundant columns from timeDimensions with granularity
+        for time_dim in cube_query.get('timeDimensions', []):
+            if time_dim.get('granularity'):
+                # If granularity is specified, the base dimension column is redundant
+                # because Cube.js also returns dimension.granularity
+                base_dimension = time_dim.get('dimension')
+                if base_dimension:
+                    columns_to_remove.add(base_dimension)
+
+        # Remove redundant columns from each row
+        if columns_to_remove:
+            cleaned_data = []
+            for row in data:
+                cleaned_row = {k: v for k, v in row.items() if k not in columns_to_remove}
+                cleaned_data.append(cleaned_row)
+            return cleaned_data
+
+        return data
 
     def _save_to_csv(self, data: List[Dict[str, Any]], cube_query: Dict[str, Any], user_query: Optional[str] = None) -> str:
         """
