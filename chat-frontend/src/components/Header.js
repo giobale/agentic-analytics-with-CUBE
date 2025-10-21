@@ -1,131 +1,92 @@
 import React, { useState } from 'react';
 import styled from 'styled-components';
-
-const colors = {
-  primary: '#6366F1',      // Modern indigo - professional yet vibrant
-  secondary: '#8B5CF6',    // Purple accent - creative energy
-  white: '#FFFFFF',
-  textPrimary: '#1F2937',  // Warm dark gray
-  accent: '#F59E0B'        // Amber - represents success/insights
-};
+import { colors, shadows, borderRadius, spacing } from '../theme/weezeventTheme';
 
 const HeaderContainer = styled.header`
-  background: linear-gradient(135deg, ${colors.primary} 0%, ${colors.secondary} 100%);
+  background: ${colors.primary};
   color: ${colors.white};
-  padding: 20px 24px;
-  box-shadow: 0 4px 20px rgba(99, 102, 241, 0.15);
+  padding: ${spacing.lg} ${spacing.xl};
+  box-shadow: ${shadows.md};
   position: sticky;
   top: 0;
   z-index: 100;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  border-bottom: 1px solid ${colors.primaryDark};
 `;
 
 const HeaderContent = styled.div`
-  max-width: 800px;
+  max-width: 900px;
   margin: 0 auto;
   display: flex;
   align-items: center;
   justify-content: space-between;
 `;
 
-const Title = styled.h1`
-  font-size: 28px;
-  font-weight: 700;
-  margin: 0;
+const BrandContainer = styled.div`
   display: flex;
   align-items: center;
-  gap: 12px;
-  letter-spacing: -0.5px;
-
-  .brand-name {
-    background: linear-gradient(45deg, ${colors.white} 0%, ${colors.accent} 100%);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    background-clip: text;
-  }
-`;
-
-const Subtitle = styled.p`
-  font-size: 15px;
-  margin: 4px 0 0 0;
-  opacity: 0.85;
-  font-weight: 400;
-  letter-spacing: 0.2px;
+  gap: ${spacing.md};
 `;
 
 const Logo = styled.div`
-  width: 40px;
-  height: 40px;
-  background: linear-gradient(135deg, ${colors.white} 0%, ${colors.accent} 100%);
-  border-radius: 12px;
+  width: 36px;
+  height: 36px;
+  background: ${colors.white};
+  border-radius: ${borderRadius.md};
   display: flex;
   align-items: center;
   justify-content: center;
   font-size: 20px;
-  box-shadow: 0 4px 12px rgba(255, 255, 255, 0.2);
-  position: relative;
-
-  &::before {
-    content: '';
-    position: absolute;
-    inset: 2px;
-    background: ${colors.primary};
-    border-radius: 10px;
-    z-index: -1;
-  }
+  font-weight: 700;
+  color: ${colors.primary};
+  box-shadow: ${shadows.sm};
 `;
 
-const StatusIndicator = styled.div`
+const TitleContainer = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+`;
+
+const Title = styled.h1`
+  font-size: 22px;
+  font-weight: 700;
+  margin: 0;
+  color: ${colors.white};
+  letter-spacing: -0.3px;
+`;
+
+const Subtitle = styled.p`
+  font-size: 13px;
+  margin: 0;
+  color: rgba(255, 255, 255, 0.8);
+  font-weight: 400;
+`;
+
+const HeaderActions = styled.div`
   display: flex;
   align-items: center;
-  gap: 10px;
-  font-size: 14px;
-  background: rgba(255, 255, 255, 0.1);
-  padding: 8px 16px;
-  border-radius: 20px;
-  backdrop-filter: blur(10px);
-  border: 1px solid rgba(255, 255, 255, 0.2);
-
-  .status-dot {
-    width: 8px;
-    height: 8px;
-    background-color: #10B981;
-    border-radius: 50%;
-    animation: pulse 2s infinite;
-  }
-
-  @keyframes pulse {
-    0% {
-      box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7);
-    }
-    70% {
-      box-shadow: 0 0 0 6px rgba(16, 185, 129, 0);
-    }
-    100% {
-      box-shadow: 0 0 0 0 rgba(16, 185, 129, 0);
-    }
-  }
+  gap: ${spacing.md};
 `;
 
 const RefreshButton = styled.button`
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 8px 16px;
+  gap: ${spacing.sm};
+  padding: ${spacing.sm} ${spacing.lg};
   background: rgba(255, 255, 255, 0.15);
   color: ${colors.white};
   border: 1px solid rgba(255, 255, 255, 0.3);
-  border-radius: 20px;
+  border-radius: ${borderRadius.full};
   font-size: 14px;
-  font-weight: 500;
+  font-weight: 600;
   cursor: pointer;
   transition: all 0.2s ease;
   backdrop-filter: blur(10px);
 
-  &:hover {
+  &:hover:not(:disabled) {
     background: rgba(255, 255, 255, 0.25);
     transform: translateY(-1px);
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    box-shadow: ${shadows.md};
   }
 
   &:active {
@@ -133,7 +94,7 @@ const RefreshButton = styled.button`
   }
 
   &:disabled {
-    opacity: 0.5;
+    opacity: 0.6;
     cursor: not-allowed;
     transform: none;
   }
@@ -157,10 +118,34 @@ const RefreshButton = styled.button`
   }
 `;
 
-const HeaderActions = styled.div`
+const StatusBadge = styled.div`
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: ${spacing.sm};
+  font-size: 13px;
+  background: rgba(16, 185, 129, 0.15);
+  color: ${colors.white};
+  padding: ${spacing.sm} ${spacing.md};
+  border-radius: ${borderRadius.full};
+  font-weight: 600;
+  border: 1px solid rgba(16, 185, 129, 0.3);
+
+  .status-dot {
+    width: 8px;
+    height: 8px;
+    background-color: ${colors.success};
+    border-radius: ${borderRadius.full};
+    animation: pulse 2s infinite;
+  }
+
+  @keyframes pulse {
+    0%, 100% {
+      box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7);
+    }
+    50% {
+      box-shadow: 0 0 0 4px rgba(16, 185, 129, 0);
+    }
+  }
 `;
 
 const Header = () => {
@@ -205,26 +190,26 @@ const Header = () => {
   return (
     <HeaderContainer>
       <HeaderContent>
-        <div>
-          <Title>
-            <Logo>📊</Logo>
-            <span className="brand-name">Weezagent Analyst</span>
-          </Title>
-          <Subtitle>🎯 Smart Event Analytics for Better Decisions</Subtitle>
-        </div>
+        <BrandContainer>
+          <Logo>W</Logo>
+          <TitleContainer>
+            <Title>Weezagent Analyst</Title>
+            <Subtitle>Smart Event Analytics</Subtitle>
+          </TitleContainer>
+        </BrandContainer>
         <HeaderActions>
           <RefreshButton
             onClick={handleRefreshMetadata}
             disabled={isRefreshing}
             title="Refresh Cube metadata and system context"
           >
-            <span className="refresh-icon">🔄</span>
-            {isRefreshing ? 'Refreshing...' : refreshMessage || 'Refresh Context'}
+            <span className="refresh-icon">↻</span>
+            {isRefreshing ? 'Refreshing...' : refreshMessage || 'Refresh'}
           </RefreshButton>
-          <StatusIndicator>
+          <StatusBadge>
             <div className="status-dot"></div>
-            🟢 AI Ready
-          </StatusIndicator>
+            Online
+          </StatusBadge>
         </HeaderActions>
       </HeaderContent>
     </HeaderContainer>

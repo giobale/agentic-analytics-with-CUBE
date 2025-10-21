@@ -1,129 +1,110 @@
 import React, { useState } from 'react';
 import styled from 'styled-components';
 import axios from 'axios';
-
-const colors = {
-  primary: '#6366F1',      // Modern indigo
-  secondary: '#8B5CF6',    // Purple accent
-  success: '#10B981',      // Emerald green
-  accent: '#F59E0B',       // Amber
-  white: '#FFFFFF',        // Pure white
-  background: '#F8FAFC',   // Soft blue-gray background
-  cardBg: '#FFFFFF',       // Card background
-  textPrimary: '#1F2937',  // Warm dark gray
-  textSecondary: '#6B7280', // Cool medium gray
-  lightGray: '#F1F5F9'     // Light blue-gray for table rows
-};
+import { colors, shadows, borderRadius, spacing } from '../theme/weezeventTheme';
 
 const MessageContainer = styled.div`
   display: flex;
   flex-direction: column;
   align-items: ${props => props.isUser ? 'flex-end' : 'flex-start'};
-  margin-bottom: 16px;
+  margin-bottom: ${spacing.lg};
 `;
 
 const MessageBubble = styled.div`
   background: ${props => props.isUser
-    ? `linear-gradient(135deg, ${colors.primary} 0%, ${colors.secondary} 100%)`
-    : colors.cardBg
+    ? colors.primary
+    : colors.white
   };
-  color: ${props => props.isUser ? colors.white : colors.textPrimary};
-  padding: 16px 20px;
-  border-radius: 20px;
+  color: ${props => props.isUser ? colors.white : colors.black};
+  padding: ${spacing.lg} ${spacing.xl};
+  border-radius: ${borderRadius.lg};
   max-width: 75%;
   word-wrap: break-word;
   line-height: 1.5;
   font-size: 15px;
   font-weight: 400;
   box-shadow: ${props => props.isUser
-    ? '0 4px 20px rgba(99, 102, 241, 0.25)'
-    : '0 2px 12px rgba(0, 0, 0, 0.08)'
+    ? shadows.primary
+    : shadows.md
   };
-  border: ${props => props.isUser ? 'none' : `1px solid ${colors.background}`};
+  border: ${props => props.isUser ? 'none' : `1px solid ${colors.gray200}`};
 
   ${props => props.isUser ? `
-    border-bottom-right-radius: 6px;
+    border-bottom-right-radius: ${borderRadius.sm};
   ` : `
-    border-bottom-left-radius: 6px;
+    border-bottom-left-radius: ${borderRadius.sm};
   `}
 
   ${props => props.isError && `
-    background: linear-gradient(135deg, #EF4444 0%, #DC2626 100%);
+    background: ${colors.error};
     color: ${colors.white};
+    border: none;
   `}
 `;
 
 const MessageInfo = styled.div`
   display: flex;
   align-items: center;
-  gap: 8px;
-  margin-top: 8px;
+  gap: ${spacing.sm};
+  margin-top: ${spacing.sm};
   font-size: 12px;
-  color: ${colors.textSecondary};
+  color: ${colors.gray500};
   font-weight: 500;
 `;
 
 const Timestamp = styled.span`
   font-size: 12px;
-  color: ${colors.textSecondary};
+  color: ${colors.gray500};
 `;
 
 const ResultsContainer = styled.div`
-  margin-top: 16px;
-  background-color: ${colors.cardBg};
-  border-radius: 16px;
-  padding: 20px;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+  margin-top: ${spacing.lg};
+  background-color: ${colors.white};
+  border-radius: ${borderRadius.lg};
+  padding: ${spacing.xl};
+  box-shadow: ${shadows.md};
   max-width: 100%;
-  border: 1px solid ${colors.background};
+  border: 1px solid ${colors.gray200};
 `;
 
 const ResultsHeader = styled.div`
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 16px;
-  padding-bottom: 12px;
-  border-bottom: 2px solid ${colors.background};
+  margin-bottom: ${spacing.lg};
+  padding-bottom: ${spacing.md};
+  border-bottom: 2px solid ${colors.gray200};
 `;
 
 const ResultsTitle = styled.h4`
   margin: 0;
-  color: ${colors.primary};
+  color: ${colors.black};
   font-size: 16px;
   font-weight: 700;
   display: flex;
   align-items: center;
-  gap: 8px;
-
-  &::before {
-    content: '📊';
-    font-size: 18px;
-  }
+  gap: ${spacing.sm};
 `;
 
 const DownloadButton = styled.button`
-  background: linear-gradient(135deg, ${colors.success} 0%, ${colors.accent} 100%);
+  background: ${colors.success};
   color: ${colors.white};
   border: none;
-  padding: 10px 16px;
-  border-radius: 12px;
-  font-size: 13px;
+  padding: ${spacing.sm} ${spacing.lg};
+  border-radius: ${borderRadius.md};
+  font-size: 14px;
   font-weight: 600;
   cursor: pointer;
-  transition: all 0.3s ease;
+  transition: all 0.2s ease;
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: ${spacing.sm};
 
-  &::before {
-    content: '💾';
-    font-size: 14px;
-  }
-
-  &:hover {
+  &:hover:not(:disabled) {
+    background: ${colors.success};
     transform: translateY(-1px);
-    box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
+    box-shadow: ${shadows.md};
+    filter: brightness(1.1);
   }
 
   &:disabled {
@@ -134,28 +115,24 @@ const DownloadButton = styled.button`
 `;
 
 const GenerateReportButton = styled.button`
-  background: linear-gradient(135deg, ${colors.secondary} 0%, ${colors.primary} 100%);
+  background: ${colors.primary};
   color: ${colors.white};
   border: none;
-  padding: 10px 16px;
-  border-radius: 12px;
-  font-size: 13px;
+  padding: ${spacing.sm} ${spacing.lg};
+  border-radius: ${borderRadius.md};
+  font-size: 14px;
   font-weight: 600;
   cursor: pointer;
-  transition: all 0.3s ease;
+  transition: all 0.2s ease;
   display: flex;
   align-items: center;
-  gap: 6px;
-  margin-left: 8px;
+  gap: ${spacing.sm};
+  margin-left: ${spacing.sm};
 
-  &::before {
-    content: '📊';
-    font-size: 14px;
-  }
-
-  &:hover {
+  &:hover:not(:disabled) {
+    background: ${colors.primaryDark};
     transform: translateY(-1px);
-    box-shadow: 0 4px 12px rgba(139, 92, 246, 0.3);
+    box-shadow: ${shadows.primary};
   }
 
   &:disabled {
@@ -166,24 +143,19 @@ const GenerateReportButton = styled.button`
 `;
 
 const ToggleButton = styled.button`
-  background: ${colors.background};
+  background: ${colors.white};
   border: 2px solid ${colors.primary};
   color: ${colors.primary};
-  font-size: 13px;
+  font-size: 14px;
   font-weight: 600;
   cursor: pointer;
-  margin-top: 12px;
-  padding: 8px 16px;
-  border-radius: 12px;
-  transition: all 0.3s ease;
+  margin-top: ${spacing.md};
+  padding: ${spacing.sm} ${spacing.lg};
+  border-radius: ${borderRadius.md};
+  transition: all 0.2s ease;
   display: flex;
   align-items: center;
-  gap: 6px;
-
-  &::before {
-    content: '👁️';
-    font-size: 14px;
-  }
+  gap: ${spacing.sm};
 
   &:hover {
     background: ${colors.primary};
@@ -195,46 +167,46 @@ const ToggleButton = styled.button`
 const Table = styled.table`
   width: 100%;
   border-collapse: collapse;
-  margin-top: 16px;
+  margin-top: ${spacing.lg};
   font-size: 14px;
-  background-color: ${colors.cardBg};
-  border-radius: 12px;
+  background-color: ${colors.white};
+  border-radius: ${borderRadius.md};
   overflow: hidden;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
-  border: 1px solid ${colors.background};
+  box-shadow: ${shadows.sm};
+  border: 1px solid ${colors.gray200};
 `;
 
 const TableHeader = styled.thead`
-  background: linear-gradient(135deg, ${colors.primary} 0%, ${colors.secondary} 100%);
-  color: white;
+  background: ${colors.primary};
+  color: ${colors.white};
 `;
 
 const TableRow = styled.tr`
   &:nth-child(even) {
-    background-color: ${colors.lightGray};
+    background-color: ${colors.gray50};
   }
 
   &:hover {
-    background-color: rgba(99, 102, 241, 0.05);
+    background-color: rgba(0, 51, 255, 0.03);
   }
 `;
 
 const TableHeaderCell = styled.th`
-  padding: 16px 20px;
+  padding: ${spacing.lg} ${spacing.xl};
   text-align: left;
   font-weight: 700;
-  font-size: 14px;
-  letter-spacing: 0.3px;
+  font-size: 13px;
+  letter-spacing: 0.5px;
   text-transform: uppercase;
-  border-bottom: 2px solid rgba(255, 255, 255, 0.2);
+  border-bottom: 2px solid ${colors.primaryDark};
 `;
 
 const TableCell = styled.td`
-  padding: 14px 20px;
-  border-bottom: 1px solid ${colors.background};
+  padding: ${spacing.md} ${spacing.xl};
+  border-bottom: 1px solid ${colors.gray200};
   vertical-align: top;
   font-size: 14px;
-  color: ${colors.textPrimary};
+  color: ${colors.black};
 
   &:first-child {
     font-weight: 600;
@@ -243,177 +215,158 @@ const TableCell = styled.td`
 `;
 
 const TableFooter = styled.div`
-  margin-top: 12px;
+  margin-top: ${spacing.md};
   font-size: 13px;
-  color: ${colors.textSecondary};
+  color: ${colors.gray600};
   font-weight: 500;
   text-align: center;
-  padding: 8px 16px;
-  background: ${colors.background};
-  border-radius: 8px;
+  padding: ${spacing.sm} ${spacing.lg};
+  background: ${colors.gray50};
+  border-radius: ${borderRadius.md};
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 6px;
-
-  &::before {
-    content: 'ℹ️';
-    font-size: 14px;
-  }
+  gap: ${spacing.sm};
 `;
 
 const ClarificationContainer = styled.div`
-  margin-top: 16px;
-  background: linear-gradient(135deg, rgba(99, 102, 241, 0.05) 0%, rgba(139, 92, 246, 0.05) 100%);
-  border-radius: 16px;
-  padding: 20px;
+  margin-top: ${spacing.lg};
+  background: rgba(0, 51, 255, 0.03);
+  border-radius: ${borderRadius.lg};
+  padding: ${spacing.xl};
   border: 2px solid ${colors.primary};
   max-width: 100%;
 `;
 
 const ClarificationTitle = styled.h4`
-  margin: 0 0 16px 0;
-  color: ${colors.primary};
+  margin: 0 0 ${spacing.lg} 0;
+  color: ${colors.black};
   font-size: 16px;
   font-weight: 700;
   display: flex;
   align-items: center;
-  gap: 8px;
-
-  &::before {
-    content: '❓';
-    font-size: 18px;
-  }
+  gap: ${spacing.sm};
 `;
 
 const QuestionsList = styled.ul`
   list-style: none;
   padding: 0;
-  margin: 0 0 16px 0;
+  margin: 0 0 ${spacing.lg} 0;
 `;
 
 const QuestionItem = styled.li`
-  padding: 12px 16px;
-  margin-bottom: 8px;
-  background: ${colors.cardBg};
-  border-radius: 12px;
-  border-left: 4px solid ${colors.accent};
-  color: ${colors.textPrimary};
+  padding: ${spacing.md} ${spacing.lg};
+  margin-bottom: ${spacing.sm};
+  background: ${colors.white};
+  border-radius: ${borderRadius.md};
+  border-left: 4px solid ${colors.warning};
+  color: ${colors.black};
   font-weight: 500;
   font-size: 14px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+  box-shadow: ${shadows.sm};
 
   &::before {
     content: '•';
-    color: ${colors.accent};
+    color: ${colors.warning};
     font-weight: bold;
-    margin-right: 8px;
+    margin-right: ${spacing.sm};
   }
 `;
 
 const SuggestionsTitle = styled.h5`
-  margin: 16px 0 12px 0;
-  color: ${colors.textSecondary};
-  font-size: 14px;
+  margin: ${spacing.lg} 0 ${spacing.md} 0;
+  color: ${colors.gray600};
+  font-size: 13px;
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.5px;
   display: flex;
   align-items: center;
-  gap: 8px;
-
-  &::before {
-    content: '💡';
-    font-size: 16px;
-  }
+  gap: ${spacing.sm};
 `;
 
 const SuggestionsList = styled.div`
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: ${spacing.sm};
 `;
 
 const SuggestionItem = styled.div`
-  padding: 12px 16px;
-  background: ${colors.cardBg};
-  border-radius: 12px;
-  border: 2px solid ${colors.background};
-  color: ${colors.textPrimary};
+  padding: ${spacing.md} ${spacing.lg};
+  background: ${colors.white};
+  border-radius: ${borderRadius.md};
+  border: 2px solid ${colors.gray200};
+  color: ${colors.black};
   font-size: 14px;
   line-height: 1.5;
   cursor: pointer;
-  transition: all 0.3s ease;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+  transition: all 0.2s ease;
+  box-shadow: ${shadows.sm};
 
   &:hover {
-    border-color: ${colors.success};
-    background: ${colors.background};
+    border-color: ${colors.primary};
+    background: ${colors.gray50};
     transform: translateX(4px);
   }
 
   &::before {
     content: '→';
-    color: ${colors.success};
+    color: ${colors.primary};
     font-weight: bold;
-    margin-right: 8px;
+    margin-right: ${spacing.sm};
   }
 `;
 
 const ErrorContainer = styled.div`
-  margin-top: 16px;
-  background: linear-gradient(135deg, rgba(239, 68, 68, 0.05) 0%, rgba(220, 38, 38, 0.05) 100%);
-  border-radius: 16px;
-  padding: 20px;
-  border: 2px solid #EF4444;
+  margin-top: ${spacing.lg};
+  background: rgba(239, 68, 68, 0.05);
+  border-radius: ${borderRadius.lg};
+  padding: ${spacing.xl};
+  border: 2px solid ${colors.error};
   max-width: 100%;
 `;
 
 const ErrorTitle = styled.h4`
-  margin: 0 0 12px 0;
-  color: #EF4444;
+  margin: 0 0 ${spacing.md} 0;
+  color: ${colors.error};
   font-size: 16px;
   font-weight: 700;
   display: flex;
   align-items: center;
-  gap: 8px;
-
-  &::before {
-    content: '⚠️';
-    font-size: 18px;
-  }
+  gap: ${spacing.sm};
 `;
 
 const ErrorMessage = styled.p`
-  margin: 0 0 12px 0;
-  color: ${colors.textPrimary};
+  margin: 0 0 ${spacing.md} 0;
+  color: ${colors.black};
   font-size: 14px;
   line-height: 1.6;
 `;
 
 const ErrorDetails = styled.details`
-  margin-top: 12px;
-  padding: 12px;
+  margin-top: ${spacing.md};
+  padding: ${spacing.md};
   background: rgba(239, 68, 68, 0.05);
-  border-radius: 8px;
+  border-radius: ${borderRadius.md};
   cursor: pointer;
 
   summary {
     font-weight: 600;
-    color: #DC2626;
+    color: ${colors.error};
     font-size: 13px;
     user-select: none;
 
     &:hover {
-      color: #EF4444;
+      color: ${colors.error};
+      filter: brightness(1.1);
     }
   }
 
   pre {
-    margin: 12px 0 0 0;
-    padding: 12px;
+    margin: ${spacing.md} 0 0 0;
+    padding: ${spacing.md};
     background: #FEF2F2;
-    border-radius: 6px;
+    border-radius: ${borderRadius.sm};
     overflow-x: auto;
     font-size: 12px;
     color: #991B1B;

@@ -1,26 +1,18 @@
 import React, { useState, useRef, useEffect } from 'react';
 import styled from 'styled-components';
-
-const colors = {
-  primary: '#1976D2',      // Royal Blue
-  success: '#7ED321',      // Bright Green
-  white: '#FFFFFF',        // White
-  background: '#F5F5F5',   // Light Gray
-  textPrimary: '#333333',  // Dark Gray
-  textSecondary: '#666666' // Medium Gray
-};
+import { colors, shadows, borderRadius, spacing } from '../theme/weezeventTheme';
 
 const InputContainer = styled.div`
-  padding: 20px 0;
+  padding: ${spacing.xl} 0;
   background-color: ${colors.white};
-  border-top: 1px solid #e0e0e0;
+  border-top: 1px solid ${colors.gray200};
   position: sticky;
   bottom: 0;
 `;
 
 const InputForm = styled.form`
   display: flex;
-  gap: 12px;
+  gap: ${spacing.md};
   align-items: flex-end;
 `;
 
@@ -31,39 +23,41 @@ const TextInputContainer = styled.div`
 
 const TextInput = styled.textarea`
   width: 100%;
-  min-height: 44px;
+  min-height: 48px;
   max-height: 120px;
-  padding: 12px 16px;
-  padding-right: 50px;
-  border: 2px solid #e0e0e0;
-  border-radius: 22px;
-  font-size: 14px;
-  line-height: 1.4;
+  padding: ${spacing.md} ${spacing.lg};
+  padding-right: 60px;
+  border: 2px solid ${colors.gray300};
+  border-radius: ${borderRadius.lg};
+  font-size: 15px;
+  line-height: 1.5;
   resize: none;
   outline: none;
   font-family: inherit;
-  color: ${colors.textPrimary};
+  color: ${colors.black};
   background-color: ${colors.white};
-  transition: border-color 0.2s ease;
+  transition: all 0.2s ease;
 
   &:focus {
     border-color: ${colors.primary};
+    box-shadow: 0 0 0 3px rgba(0, 51, 255, 0.1);
   }
 
   &:disabled {
-    background-color: ${colors.background};
+    background-color: ${colors.gray100};
     cursor: not-allowed;
+    border-color: ${colors.gray200};
   }
 
   &::placeholder {
-    color: ${colors.textSecondary};
+    color: ${colors.gray400};
   }
 `;
 
 const SendButton = styled.button`
-  width: 44px;
-  height: 44px;
-  border-radius: 50%;
+  width: 48px;
+  height: 48px;
+  border-radius: ${borderRadius.full};
   border: none;
   background-color: ${colors.primary};
   color: ${colors.white};
@@ -73,31 +67,41 @@ const SendButton = styled.button`
   justify-content: center;
   transition: all 0.2s ease;
   flex-shrink: 0;
+  box-shadow: ${shadows.md};
 
   &:hover:not(:disabled) {
-    background-color: #1565C0;
+    background-color: ${colors.primaryDark};
     transform: scale(1.05);
+    box-shadow: ${shadows.primary};
+  }
+
+  &:active:not(:disabled) {
+    transform: scale(0.95);
   }
 
   &:disabled {
-    background-color: ${colors.textSecondary};
+    background-color: ${colors.gray400};
     cursor: not-allowed;
     transform: none;
+    box-shadow: none;
   }
 
   svg {
-    width: 20px;
-    height: 20px;
+    width: 22px;
+    height: 22px;
   }
 `;
 
 const CharacterCount = styled.div`
   position: absolute;
-  bottom: 8px;
-  right: 12px;
+  bottom: ${spacing.sm};
+  right: ${spacing.md};
   font-size: 11px;
-  color: ${colors.textSecondary};
+  color: ${colors.gray500};
   pointer-events: none;
+  background: ${colors.white};
+  padding: 2px ${spacing.xs};
+  border-radius: ${borderRadius.sm};
 `;
 
 const MessageInput = ({ onSendMessage, disabled = false }) => {
