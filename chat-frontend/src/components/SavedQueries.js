@@ -268,7 +268,6 @@ const SavedQueries = ({ savedQueries = [] }) => {
               {filteredQueries.map(query => (
                 <QueryCard key={query.id} role="listitem">
                   <QueryName>{query.name}</QueryName>
-                  <QueryDescription>{query.description}</QueryDescription>
                   <QueryMeta>
                     <DateSaved>Saved on {new Date(query.dateSaved).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })}</DateSaved>
                     {query.rowCount && (
