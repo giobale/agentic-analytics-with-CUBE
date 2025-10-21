@@ -28,6 +28,7 @@ from conversation_manager import ConversationManager, ConversationManagerError
 from llm_client import LLMClient, LLMClientError
 from cube_client import CubeClient, CubeClientError
 from cube_query_validator import CubeQueryValidator, CubeQueryValidatorError
+from cube_metadata_fetcher import CubeMetadataFetcher, CubeMetadataFetcherError
 
 # Import system prompt generator
 try:
@@ -50,7 +51,8 @@ class QueryOrchestrator:
                  cube_api_secret: str = "baubeach",
                  max_conversation_messages: int = 6,
                  view_yml_path: Optional[str] = None,
-                 max_validation_retries: int = 2):
+                 max_validation_retries: int = 2,
+                 use_dynamic_metadata: bool = True):
         """
         Initialize the query orchestrator.
 
@@ -61,20 +63,30 @@ class QueryOrchestrator:
             max_conversation_messages: Maximum conversation history to maintain
             view_yml_path: Path to view YML file for validation (auto-detected if None)
             max_validation_retries: Maximum retries for LLM to fix invalid parameters
+            use_dynamic_metadata: If True, fetch metadata from Cube API; if False, use static YAML
         """
+        # Store configuration
+        self.cube_base_url = cube_base_url
+        self.cube_api_secret = cube_api_secret
+        self.use_dynamic_metadata = use_dynamic_metadata
+
         # Initialize components
         self.conversation_manager = ConversationManager(max_conversation_messages)
         self.llm_client = LLMClient(api_key=openai_api_key)
         self.cube_client = CubeClient(base_url=cube_base_url, api_secret=cube_api_secret)
 
-        # Initialize system prompt generator
-        system_prompt_path = os.path.join(os.path.dirname(__file__), 'system-prompt-generator')
-        self.context_manager = ContextManager(system_prompt_path)
-
         # Cache configuration
         self.cache_dir = os.getenv("CACHE_DIR", "/app/cache")
         self.system_prompt_cache_file = os.path.join(self.cache_dir, "system_prompt.txt")
         self.system_prompt_metadata_file = os.path.join(self.cache_dir, "system_prompt_metadata.json")
+
+        # Initialize metadata fetcher (will be set up during initialization)
+        self.metadata_fetcher = None
+
+        # Initialize system prompt generator (will be configured during initialization)
+        system_prompt_path = os.path.join(os.path.dirname(__file__), 'system-prompt-generator')
+        self.system_prompt_base_path = system_prompt_path
+        self.context_manager = None
 
         # Validation configuration
         self.max_validation_retries = max_validation_retries
@@ -226,6 +238,51 @@ class QueryOrchestrator:
             if not llm_valid:
                 initialization_result["errors"].append("OpenAI API key validation failed")
 
+            # Initialize metadata fetcher if using dynamic metadata
+            if self.use_dynamic_metadata:
+                try:
+                    self.metadata_fetcher = CubeMetadataFetcher(
+                        base_url=self.cube_base_url,
+                        jwt_token=self.cube_client.jwt_token,
+                        cache_dir=self.cache_dir
+                    )
+
+                    # Fetch metadata from Cube API
+                    metadata_result = self.metadata_fetcher.fetch_metadata(use_cache=True)
+
+                    if metadata_result["success"]:
+                        initialization_result["components"]["metadata_fetcher"] = {
+                            "success": True,
+                            "source": metadata_result["source"],
+                            "timestamp": metadata_result["timestamp"]
+                        }
+                        print(f"✅ Metadata fetched from {metadata_result['source']}")
+                    else:
+                        initialization_result["errors"].append(f"Metadata fetch failed: {metadata_result.get('error')}")
+                        initialization_result["components"]["metadata_fetcher"] = {
+                            "success": False,
+                            "error": metadata_result.get("error")
+                        }
+                        # Don't fail initialization, will fallback to YAML
+                        print(f"⚠️  Metadata fetch failed, will use static YAML fallback")
+                        self.use_dynamic_metadata = False
+
+                except Exception as e:
+                    initialization_result["errors"].append(f"Metadata fetcher initialization failed: {str(e)}")
+                    initialization_result["components"]["metadata_fetcher"] = {
+                        "success": False,
+                        "error": str(e)
+                    }
+                    # Fallback to static YAML
+                    self.use_dynamic_metadata = False
+                    print(f"⚠️  Metadata fetcher failed, using static YAML fallback")
+
+            # Initialize context manager with metadata fetcher
+            self.context_manager = ContextManager(
+                base_path=self.system_prompt_base_path,
+                cube_metadata_fetcher=self.metadata_fetcher if self.use_dynamic_metadata else None
+            )
+
             # Load or generate system prompt
             try:
                 # First, try to load from cache
@@ -264,18 +321,87 @@ class QueryOrchestrator:
 
             # Initialize query validator
             try:
-                print(f"🔍 DEBUG: Initializing query validator with path: {self.view_yml_path}")
-                self.query_validator = CubeQueryValidator(self.view_yml_path)
-                schema_summary = self.query_validator.get_schema_summary()
-                print(f"✅ Query validator initialized successfully")
-                print(f"   Cube: {schema_summary['cube_name']}")
-                print(f"   Measures: {len(schema_summary['measures'])} ({', '.join(schema_summary['measures'][:3])}...)")
-                print(f"   Dimensions: {len(schema_summary['dimensions'])} ({', '.join(schema_summary['dimensions'][:3])}...)")
-                initialization_result["components"]["query_validator"] = {
-                    "success": True,
-                    "view_yml_path": self.view_yml_path,
-                    "schema_summary": schema_summary
-                }
+                if self.use_dynamic_metadata and self.metadata_fetcher:
+                    # Use dynamic metadata for validator
+                    print(f"🔍 DEBUG: Initializing query validator with dynamic metadata")
+                    # Get metadata for the primary view (EventPerformanceOverview)
+                    view_metadata = self.metadata_fetcher.get_view_metadata('EventPerformanceOverview')
+
+                    if view_metadata.get('success'):
+                        # Convert to validator-compatible format
+                        # Strip cube prefix from field names (EventPerformanceOverview.revenues -> revenues)
+                        measures_without_prefix = []
+                        for measure in view_metadata['measures']:
+                            field_name = measure['name']
+                            # Remove prefix if present
+                            if '.' in field_name:
+                                field_name = field_name.split('.', 1)[1]
+                            measures_without_prefix.append({
+                                'name': field_name,
+                                'title': measure.get('title', ''),
+                                'description': measure.get('description', '')
+                            })
+
+                        dimensions_without_prefix = []
+                        for dimension in view_metadata['dimensions']:
+                            field_name = dimension['name']
+                            # Remove prefix if present
+                            if '.' in field_name:
+                                field_name = field_name.split('.', 1)[1]
+                            dimensions_without_prefix.append({
+                                'name': field_name,
+                                'title': dimension.get('title', ''),
+                                'description': dimension.get('description', ''),
+                                'type': dimension.get('type', '')  # Include type for time dimension validation
+                            })
+
+                        validator_metadata = {
+                            'name': view_metadata['view'],
+                            'title': view_metadata.get('title', ''),
+                            'description': view_metadata.get('description', ''),
+                            'measures': measures_without_prefix,
+                            'dimensions': dimensions_without_prefix
+                        }
+
+                        self.query_validator = CubeQueryValidator(metadata_dict=validator_metadata)
+                        schema_summary = self.query_validator.get_schema_summary()
+                        print(f"✅ Query validator initialized with dynamic metadata")
+                        print(f"   Cube: {schema_summary['cube_name']}")
+                        print(f"   Measures: {len(schema_summary['measures'])} ({', '.join(schema_summary['measures'][:3])}...)")
+                        print(f"   Dimensions: {len(schema_summary['dimensions'])} ({', '.join(schema_summary['dimensions'][:3])}...)")
+                        initialization_result["components"]["query_validator"] = {
+                            "success": True,
+                            "source": "dynamic_metadata",
+                            "schema_summary": schema_summary
+                        }
+                    else:
+                        # Fallback to YAML if metadata fetch failed
+                        print(f"⚠️  Failed to get view metadata: {view_metadata.get('error')}")
+                        print(f"🔍 DEBUG: Falling back to YAML validator")
+                        self.query_validator = CubeQueryValidator(view_yml_path=self.view_yml_path)
+                        schema_summary = self.query_validator.get_schema_summary()
+                        print(f"✅ Query validator initialized from YAML (fallback)")
+                        initialization_result["components"]["query_validator"] = {
+                            "success": True,
+                            "source": "yaml_fallback",
+                            "view_yml_path": self.view_yml_path,
+                            "schema_summary": schema_summary
+                        }
+                else:
+                    # Use static YAML validator
+                    print(f"🔍 DEBUG: Initializing query validator with YAML: {self.view_yml_path}")
+                    self.query_validator = CubeQueryValidator(view_yml_path=self.view_yml_path)
+                    schema_summary = self.query_validator.get_schema_summary()
+                    print(f"✅ Query validator initialized successfully from YAML")
+                    print(f"   Cube: {schema_summary['cube_name']}")
+                    print(f"   Measures: {len(schema_summary['measures'])} ({', '.join(schema_summary['measures'][:3])}...)")
+                    print(f"   Dimensions: {len(schema_summary['dimensions'])} ({', '.join(schema_summary['dimensions'][:3])}...)")
+                    initialization_result["components"]["query_validator"] = {
+                        "success": True,
+                        "source": "yaml",
+                        "view_yml_path": self.view_yml_path,
+                        "schema_summary": schema_summary
+                    }
             except Exception as e:
                 print(f"❌ Query validator initialization failed: {str(e)}")
                 import traceback
@@ -546,6 +672,9 @@ class QueryOrchestrator:
             prompt_result = self.context_manager.generate_system_prompt()
             self.system_prompt = prompt_result["system_prompt"]
 
+            # Update cache
+            self._save_system_prompt_cache(self.system_prompt, prompt_result["metadata"])
+
             return {
                 "success": True,
                 "new_prompt_length": len(self.system_prompt),
@@ -556,6 +685,107 @@ class QueryOrchestrator:
             return {
                 "success": False,
                 "error": f"Failed to regenerate system prompt: {str(e)}"
+            }
+
+    def refresh_cube_metadata(self) -> Dict[str, Any]:
+        """
+        Refresh Cube metadata from API and regenerate system prompt.
+        This method is called when the user manually triggers a metadata refresh.
+
+        Returns:
+            Refresh result with status and details
+        """
+        if not self.use_dynamic_metadata or not self.metadata_fetcher:
+            return {
+                "success": False,
+                "error": "Dynamic metadata is not enabled",
+                "details": "Orchestrator is configured to use static YAML files"
+            }
+
+        try:
+            # Clear metadata cache
+            self.metadata_fetcher.clear_cache()
+            print("🔄 Cleared metadata cache")
+
+            # Fetch fresh metadata from Cube API
+            metadata_result = self.metadata_fetcher.fetch_metadata(use_cache=False)
+
+            if not metadata_result["success"]:
+                return {
+                    "success": False,
+                    "error": "Failed to fetch metadata from Cube API",
+                    "details": metadata_result.get("error")
+                }
+
+            print(f"✅ Fetched fresh metadata from Cube API")
+
+            # Get metadata summary
+            summary = self.metadata_fetcher.get_summary()
+
+            # Regenerate system prompt with new metadata
+            prompt_result = self.context_manager.generate_system_prompt()
+            self.system_prompt = prompt_result["system_prompt"]
+
+            # Save to cache
+            self._save_system_prompt_cache(self.system_prompt, prompt_result["metadata"])
+
+            print(f"✅ Regenerated system prompt with {prompt_result['metadata']['views_count']} views")
+
+            # Refresh query validator with new metadata
+            try:
+                view_metadata = self.metadata_fetcher.get_view_metadata('EventPerformanceOverview')
+                if view_metadata.get('success'):
+                    # Strip cube prefix from field names
+                    measures_without_prefix = []
+                    for measure in view_metadata['measures']:
+                        field_name = measure['name']
+                        if '.' in field_name:
+                            field_name = field_name.split('.', 1)[1]
+                        measures_without_prefix.append({
+                            'name': field_name,
+                            'title': measure.get('title', ''),
+                            'description': measure.get('description', '')
+                        })
+
+                    dimensions_without_prefix = []
+                    for dimension in view_metadata['dimensions']:
+                        field_name = dimension['name']
+                        if '.' in field_name:
+                            field_name = field_name.split('.', 1)[1]
+                        dimensions_without_prefix.append({
+                            'name': field_name,
+                            'title': dimension.get('title', ''),
+                            'description': dimension.get('description', ''),
+                            'type': dimension.get('type', '')  # Include type for time dimension validation
+                        })
+
+                    validator_metadata = {
+                        'name': view_metadata['view'],
+                        'title': view_metadata.get('title', ''),
+                        'description': view_metadata.get('description', ''),
+                        'measures': measures_without_prefix,
+                        'dimensions': dimensions_without_prefix
+                    }
+                    self.query_validator = CubeQueryValidator(metadata_dict=validator_metadata)
+                    print(f"✅ Query validator refreshed with new metadata")
+                else:
+                    print(f"⚠️  Failed to refresh validator: {view_metadata.get('error')}")
+            except Exception as e:
+                print(f"⚠️  Warning: Failed to refresh query validator: {str(e)}")
+
+            return {
+                "success": True,
+                "metadata_summary": summary,
+                "system_prompt_metadata": prompt_result["metadata"],
+                "system_prompt_length": len(self.system_prompt),
+                "timestamp": datetime.now().isoformat()
+            }
+
+        except Exception as e:
+            return {
+                "success": False,
+                "error": f"Failed to refresh metadata: {str(e)}",
+                "details": "An unexpected error occurred during metadata refresh"
             }
 
     def get_available_cubes(self) -> List[str]:
