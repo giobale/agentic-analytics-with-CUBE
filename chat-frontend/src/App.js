@@ -12,9 +12,16 @@ import { colors, shadows, borderRadius, spacing } from './theme/weezeventTheme';
 const AppContainer = styled.div`
   display: flex;
   flex-direction: column;
-  height: 100vh;
+  min-height: 100vh;
   background-color: ${colors.white};
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Helvetica Neue', Arial, sans-serif;
+`;
+
+const ContentWrapper = styled.div`
+  flex: 1;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
 `;
 
 const ChatContainer = styled.div`
@@ -25,33 +32,15 @@ const ChatContainer = styled.div`
   margin: 0 auto;
   width: 100%;
   padding: 0 ${spacing.xl};
+  min-height: calc(100vh - 145px); /* Account for header + tabs height */
 `;
 
 const MessagesContainer = styled.div`
   flex: 1;
-  overflow-y: auto;
   padding: ${spacing.xl} 0;
   display: flex;
   flex-direction: column;
   gap: ${spacing.lg};
-
-  &::-webkit-scrollbar {
-    width: 8px;
-  }
-
-  &::-webkit-scrollbar-track {
-    background: ${colors.gray100};
-    border-radius: ${borderRadius.full};
-  }
-
-  &::-webkit-scrollbar-thumb {
-    background: ${colors.gray400};
-    border-radius: ${borderRadius.full};
-
-    &:hover {
-      background: ${colors.gray500};
-    }
-  }
 `;
 
 const LoadingIndicator = styled.div`
@@ -298,61 +287,63 @@ function App() {
       <Header />
       <TabNavigation activeTab={activeTab} onTabChange={handleTabChange} />
 
-      {activeTab === 'chat' && (
-        <ChatContainer>
-          <MessagesContainer>
-            {messages.length === 0 ? (
-              <WelcomeMessage>
-                <h2>Welcome to Weezagent Analyst</h2>
-                <div className="subtitle">Your AI-powered event analytics companion</div>
-                <div className="description">
-                  Get instant insights from your event data using natural language.
-                  Ask questions about revenue, attendance, trends, and performance metrics.
-                </div>
-                <div className="suggestions">
-                  {sampleQuestions.map((question, index) => (
-                    <div
-                      key={index}
-                      className="suggestion"
-                      onClick={() => handleSuggestionClick(question.text)}
-                    >
-                      <div className="question-text">{question.text}</div>
-                      <div className="question-type">{question.type}</div>
-                    </div>
-                  ))}
-                </div>
-              </WelcomeMessage>
-            ) : (
-              messages.map(message => (
-                <ChatMessage
-                  key={message.id}
-                  message={message}
-                  onSuggestionClick={handleSendMessage}
-                  onSaveQuery={handleSaveQuery}
-                />
-              ))
-            )}
+      <ContentWrapper>
+        {activeTab === 'chat' && (
+          <ChatContainer>
+            <MessagesContainer>
+              {messages.length === 0 ? (
+                <WelcomeMessage>
+                  <h2>Welcome to Weezagent Analyst</h2>
+                  <div className="subtitle">Your AI-powered event analytics companion</div>
+                  <div className="description">
+                    Get instant insights from your event data using natural language.
+                    Ask questions about revenue, attendance, trends, and performance metrics.
+                  </div>
+                  <div className="suggestions">
+                    {sampleQuestions.map((question, index) => (
+                      <div
+                        key={index}
+                        className="suggestion"
+                        onClick={() => handleSuggestionClick(question.text)}
+                      >
+                        <div className="question-text">{question.text}</div>
+                        <div className="question-type">{question.type}</div>
+                      </div>
+                    ))}
+                  </div>
+                </WelcomeMessage>
+              ) : (
+                messages.map(message => (
+                  <ChatMessage
+                    key={message.id}
+                    message={message}
+                    onSuggestionClick={handleSendMessage}
+                    onSaveQuery={handleSaveQuery}
+                  />
+                ))
+              )}
 
-            {isLoading && (
-              <LoadingIndicator>
-                Analyzing your event data...
-              </LoadingIndicator>
-            )}
+              {isLoading && (
+                <LoadingIndicator>
+                  Analyzing your event data...
+                </LoadingIndicator>
+              )}
 
-            <div ref={messagesEndRef} />
-          </MessagesContainer>
+              <div ref={messagesEndRef} />
+            </MessagesContainer>
 
-          <MessageInput onSendMessage={handleSendMessage} disabled={isLoading} />
-        </ChatContainer>
-      )}
+            <MessageInput onSendMessage={handleSendMessage} disabled={isLoading} />
+          </ChatContainer>
+        )}
 
-      {activeTab === 'saved-queries' && (
-        <SavedQueries savedQueries={savedQueries} />
-      )}
+        {activeTab === 'saved-queries' && (
+          <SavedQueries savedQueries={savedQueries} />
+        )}
 
-      {activeTab === 'metrics-catalog' && (
-        <MetricsCatalog />
-      )}
+        {activeTab === 'metrics-catalog' && (
+          <MetricsCatalog />
+        )}
+      </ContentWrapper>
     </AppContainer>
   );
 }
