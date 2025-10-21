@@ -142,6 +142,46 @@ const GenerateReportButton = styled.button`
   }
 `;
 
+const SaveQueryButton = styled.button`
+  background: ${colors.white};
+  color: ${colors.primary};
+  border: 2px solid ${colors.primary};
+  padding: ${spacing.sm} ${spacing.lg};
+  border-radius: ${borderRadius.md};
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  gap: ${spacing.sm};
+  margin-left: ${spacing.sm};
+
+  &:hover:not(:disabled) {
+    background: ${colors.primary};
+    color: ${colors.white};
+    transform: translateY(-1px);
+    box-shadow: ${shadows.primary};
+  }
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    transform: none;
+  }
+
+  &.saved {
+    background: ${colors.success};
+    color: ${colors.white};
+    border-color: ${colors.success};
+
+    &:hover {
+      background: ${colors.success};
+      filter: brightness(1.1);
+    }
+  }
+`;
+
 const ToggleButton = styled.button`
   background: ${colors.white};
   border: 2px solid ${colors.primary};
@@ -375,9 +415,10 @@ const ErrorDetails = styled.details`
   }
 `;
 
-const ChatMessage = ({ message, onSuggestionClick }) => {
+const ChatMessage = ({ message, onSuggestionClick, onSaveQuery }) => {
   const [showData, setShowData] = useState(false);
   const [isGeneratingReport, setIsGeneratingReport] = useState(false);
+  const [isSaved, setIsSaved] = useState(false);
 
   const formatTimestamp = (date) => {
     return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
@@ -429,6 +470,33 @@ const ChatMessage = ({ message, onSuggestionClick }) => {
       alert(`Error generating report: ${error.response?.data?.detail || error.message}`);
     } finally {
       setIsGeneratingReport(false);
+    }
+  };
+
+  const handleSaveQuery = () => {
+    if (!message.data || !message.text) {
+      alert('Unable to save query - missing data');
+      return;
+    }
+
+    if (isSaved) {
+      return; // Already saved
+    }
+
+    // Create query object to save
+    const queryToSave = {
+      id: message.id,
+      name: message.text.length > 60 ? message.text.substring(0, 57) + '...' : message.text,
+      description: message.data.description || message.text,
+      dateSaved: new Date().toISOString(),
+      rowCount: message.data.row_count || null,
+      csvFilename: message.data.csv_filename || null
+    };
+
+    // Call parent handler to save query
+    if (onSaveQuery) {
+      onSaveQuery(queryToSave);
+      setIsSaved(true);
     }
   };
 
@@ -551,6 +619,13 @@ const ChatMessage = ({ message, onSuggestionClick }) => {
             </ResultsTitle>
             {message.data.csv_filename && (
               <div style={{ display: 'flex', alignItems: 'center' }}>
+                <SaveQueryButton
+                  onClick={handleSaveQuery}
+                  disabled={isSaved}
+                  className={isSaved ? 'saved' : ''}
+                >
+                  {isSaved ? '✓ Saved' : 'Save Query'}
+                </SaveQueryButton>
                 <DownloadButton onClick={handleDownloadCSV}>
                   Download CSV
                 </DownloadButton>

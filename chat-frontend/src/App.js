@@ -3,6 +3,9 @@ import styled from 'styled-components';
 import ChatMessage from './components/ChatMessage';
 import MessageInput from './components/MessageInput';
 import Header from './components/Header';
+import TabNavigation from './components/TabNavigation';
+import SavedQueries from './components/SavedQueries';
+import MetricsCatalog from './components/MetricsCatalog';
 import axios from 'axios';
 import { colors, shadows, borderRadius, spacing } from './theme/weezeventTheme';
 
@@ -174,6 +177,8 @@ const WelcomeMessage = styled.div`
 function App() {
   const [messages, setMessages] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
+  const [activeTab, setActiveTab] = useState('chat');
+  const [savedQueries, setSavedQueries] = useState([]);
   const messagesEndRef = useRef(null);
 
   const scrollToBottom = () => {
@@ -275,53 +280,79 @@ function App() {
     handleSendMessage(suggestion);
   };
 
+  const handleSaveQuery = (query) => {
+    // Add query to saved queries if not already saved
+    const existingQuery = savedQueries.find(q => q.id === query.id);
+    if (!existingQuery) {
+      setSavedQueries(prev => [query, ...prev]);
+      console.log('Query saved:', query);
+    }
+  };
+
+  const handleTabChange = (newTab) => {
+    setActiveTab(newTab);
+  };
+
   return (
     <AppContainer>
       <Header />
-      <ChatContainer>
-        <MessagesContainer>
-          {messages.length === 0 ? (
-            <WelcomeMessage>
-              <h2>Welcome to Weezagent Analyst</h2>
-              <div className="subtitle">Your AI-powered event analytics companion</div>
-              <div className="description">
-                Get instant insights from your event data using natural language.
-                Ask questions about revenue, attendance, trends, and performance metrics.
-              </div>
-              <div className="suggestions">
-                {sampleQuestions.map((question, index) => (
-                  <div
-                    key={index}
-                    className="suggestion"
-                    onClick={() => handleSuggestionClick(question.text)}
-                  >
-                    <div className="question-text">{question.text}</div>
-                    <div className="question-type">{question.type}</div>
-                  </div>
-                ))}
-              </div>
-            </WelcomeMessage>
-          ) : (
-            messages.map(message => (
-              <ChatMessage
-                key={message.id}
-                message={message}
-                onSuggestionClick={handleSendMessage}
-              />
-            ))
-          )}
+      <TabNavigation activeTab={activeTab} onTabChange={handleTabChange} />
 
-          {isLoading && (
-            <LoadingIndicator>
-              Analyzing your event data...
-            </LoadingIndicator>
-          )}
+      {activeTab === 'chat' && (
+        <ChatContainer>
+          <MessagesContainer>
+            {messages.length === 0 ? (
+              <WelcomeMessage>
+                <h2>Welcome to Weezagent Analyst</h2>
+                <div className="subtitle">Your AI-powered event analytics companion</div>
+                <div className="description">
+                  Get instant insights from your event data using natural language.
+                  Ask questions about revenue, attendance, trends, and performance metrics.
+                </div>
+                <div className="suggestions">
+                  {sampleQuestions.map((question, index) => (
+                    <div
+                      key={index}
+                      className="suggestion"
+                      onClick={() => handleSuggestionClick(question.text)}
+                    >
+                      <div className="question-text">{question.text}</div>
+                      <div className="question-type">{question.type}</div>
+                    </div>
+                  ))}
+                </div>
+              </WelcomeMessage>
+            ) : (
+              messages.map(message => (
+                <ChatMessage
+                  key={message.id}
+                  message={message}
+                  onSuggestionClick={handleSendMessage}
+                  onSaveQuery={handleSaveQuery}
+                />
+              ))
+            )}
 
-          <div ref={messagesEndRef} />
-        </MessagesContainer>
+            {isLoading && (
+              <LoadingIndicator>
+                Analyzing your event data...
+              </LoadingIndicator>
+            )}
 
-        <MessageInput onSendMessage={handleSendMessage} disabled={isLoading} />
-      </ChatContainer>
+            <div ref={messagesEndRef} />
+          </MessagesContainer>
+
+          <MessageInput onSendMessage={handleSendMessage} disabled={isLoading} />
+        </ChatContainer>
+      )}
+
+      {activeTab === 'saved-queries' && (
+        <SavedQueries savedQueries={savedQueries} />
+      )}
+
+      {activeTab === 'metrics-catalog' && (
+        <MetricsCatalog />
+      )}
     </AppContainer>
   );
 }
