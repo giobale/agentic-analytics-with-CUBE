@@ -21,7 +21,7 @@ const ChatContainer = styled.div`
   flex: 1;
   display: flex;
   flex-direction: column;
-  max-width: 900px;
+  max-width: 1360px;
   margin: 0 auto;
   width: 100%;
   padding: 0 ${spacing.xl};

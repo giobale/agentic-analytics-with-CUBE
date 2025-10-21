@@ -12,11 +12,13 @@ const TabsContainer = styled.div`
 `;
 
 const TabsWrapper = styled.div`
-  max-width: 900px;
+  max-width: 1360px;
   margin: 0 auto;
   padding: 0 ${spacing.xl};
   display: flex;
-  gap: ${spacing.sm};
+  justify-content: center;
+  align-items: center;
+  gap: ${spacing['4xl']};
 `;
 
 const Tab = styled.button`

@@ -3,9 +3,10 @@ import styled from 'styled-components';
 import { colors, shadows, borderRadius, spacing } from '../theme/weezeventTheme';
 
 const Container = styled.div`
-  max-width: 900px;
+  max-width: 1360px;
   margin: 0 auto;
   padding: ${spacing['3xl']} ${spacing.xl};
+  min-width: 1024px;
 `;
 
 const Header = styled.div`
@@ -58,16 +59,16 @@ const SearchInput = styled.input`
 
 const Grid = styled.div`
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  grid-template-columns: repeat(4, 1fr);
   gap: ${spacing.xl};
   margin-bottom: ${spacing.xl};
 
-  @media (max-width: 768px) {
-    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  @media (max-width: 1279px) {
+    grid-template-columns: repeat(3, 1fr);
   }
 
-  @media (max-width: 480px) {
-    grid-template-columns: 1fr;
+  @media (max-width: 1023px) {
+    overflow-x: auto;
   }
 `;
 
@@ -80,7 +81,8 @@ const QueryCard = styled.div`
   transition: all 0.2s ease;
   display: flex;
   flex-direction: column;
-  gap: ${spacing.md};
+  height: 100%;
+  min-height: 180px;
 
   &:hover {
     border-color: ${colors.primary};
@@ -93,15 +95,25 @@ const QueryName = styled.h3`
   font-size: 16px;
   font-weight: 700;
   color: ${colors.black};
-  margin: 0;
+  margin: 0 0 ${spacing.md} 0;
   line-height: 1.4;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  text-overflow: ellipsis;
 `;
 
 const QueryDescription = styled.p`
   font-size: 14px;
   color: ${colors.gray600};
-  margin: 0;
+  margin: 0 0 auto 0;
   line-height: 1.5;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  text-overflow: ellipsis;
   flex: 1;
 `;
 
@@ -113,6 +125,7 @@ const QueryMeta = styled.div`
   color: ${colors.gray500};
   padding-top: ${spacing.md};
   border-top: 1px solid ${colors.gray200};
+  margin-top: ${spacing.md};
 `;
 
 const DateSaved = styled.span`
@@ -131,6 +144,11 @@ const EmptyState = styled.div`
   text-align: center;
   padding: ${spacing['4xl']} ${spacing.xl};
   color: ${colors.gray500};
+  min-height: 400px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
 
   svg {
     width: 80px;
@@ -160,6 +178,10 @@ const ResultsCount = styled.div`
   color: ${colors.gray600};
   margin-bottom: ${spacing.lg};
   font-weight: 500;
+`;
+
+const GridWrapper = styled.div`
+  role: list;
 `;
 
 const SavedQueries = ({ savedQueries = [] }) => {
@@ -206,35 +228,35 @@ const SavedQueries = ({ savedQueries = [] }) => {
         <SearchContainer>
           <SearchInput
             type="text"
-            placeholder="Search saved queries..."
+            placeholder="Search…"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
+            aria-label="Search saved queries"
           />
         </SearchContainer>
       )}
 
       {savedQueries.length === 0 ? (
-        <EmptyState>
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <EmptyState role="status" aria-live="polite">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
             <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"></path>
           </svg>
           <h3>No saved queries yet</h3>
           <p>
-            Save a query from the Chat tab to access it here.<br />
-            Saved queries help you quickly run your most common analyses.
+            You haven't saved any queries yet. Save a query from the Chat tab.
           </p>
         </EmptyState>
       ) : (
         <>
           {searchTerm && (
-            <ResultsCount>
+            <ResultsCount role="status" aria-live="polite">
               {filteredQueries.length} {filteredQueries.length === 1 ? 'result' : 'results'} found
             </ResultsCount>
           )}
 
           {filteredQueries.length === 0 ? (
-            <EmptyState>
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <EmptyState role="status" aria-live="polite">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
                 <circle cx="11" cy="11" r="8"></circle>
                 <path d="m21 21-4.35-4.35"></path>
               </svg>
@@ -242,13 +264,13 @@ const SavedQueries = ({ savedQueries = [] }) => {
               <p>Try adjusting your search terms</p>
             </EmptyState>
           ) : (
-            <Grid>
+            <Grid role="list" aria-label="Saved queries">
               {filteredQueries.map(query => (
-                <QueryCard key={query.id}>
+                <QueryCard key={query.id} role="listitem">
                   <QueryName>{query.name}</QueryName>
                   <QueryDescription>{query.description}</QueryDescription>
                   <QueryMeta>
-                    <DateSaved>{formatDate(query.dateSaved)}</DateSaved>
+                    <DateSaved>Saved on {new Date(query.dateSaved).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })}</DateSaved>
                     {query.rowCount && (
                       <RowCount>{query.rowCount} rows</RowCount>
                     )}
