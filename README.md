@@ -1,156 +1,91 @@
 # CUBE Semantic Layer POC
 
-This Proof of Concept demonstrates a natural language querying system built on top of a MySQL database using CUBE's semantic layer. Users can interact with their data through a conversational chat interface that leverages an LLM to translate natural language questions into appropriate CUBE API calls.
+Natural language querying system that translates user questions into CUBE API calls. Users ask questions in plain English, the system retrieves data from MySQL through CUBE's semantic layer, and provides results as structured data and CSV exports.
 
-## Architecture Overview
+## Architecture
 
 ```
-┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
-│   Chat Frontend │────│   Orchestrator  │────│   CUBE Core     │────│   MySQL DB      │
-│ (React/Nginx)   │    │   (FastAPI)     │    │ (Semantic Layer)│    │ (Data Storage)  │
-│ Port: 3000      │    │   Port: 8080    │    │   Port: 4000    │    │   Port: 3306    │
-└─────────────────┘    └─────────────────┘    └─────────────────┘    └─────────────────┘
-                                │
-                                │
-                        ┌─────────────────┐
-                        │   LLM Service   │
-                        │   (OpenAI API)  │
-                        └─────────────────┘
+Chat Frontend (React) → Orchestrator (FastAPI) → CUBE Core → MySQL
+                               ↓
+                          OpenAI API
 ```
 
-**Key Workflow:**
-1. User enters a natural language question in the chat interface
-2. Frontend sends HTTP request to orchestrator REST API (`/query` endpoint)
-3. Orchestrator processes query and calls OpenAI LLM for CUBE query generation
-4. Orchestrator executes generated query against CUBE API
-5. CUBE retrieves data from MySQL database
-6. Results flow back through orchestrator to frontend as structured data and CSV exports
+**Components:**
 
-## Quick Start
+- **Chat Frontend**: React UI for natural language queries. Displays results as tables and charts. Saves queries for reuse.
+- **Orchestrator**: FastAPI service that processes queries using OpenAI LLM, validates generated CUBE queries, executes them, and returns results.
+- **CUBE Core**: Semantic layer that translates CUBE queries into SQL and manages data models via YAML definitions.
+- **MySQL**: Stores event management data loaded from CSV files.
+- **Analyst Agent**: Streamlit application for CSV data analysis and report generation using AI.
 
-### Prerequisites
+## Running Locally
+
+**Prerequisites:**
 - Docker and Docker Compose
 - OpenAI API key
 
-### Build and Run
+**Steps:**
 
-1. **Clone and setup environment:**
+1. Clone repository and add API key:
 ```bash
 git clone <repository-url>
 cd PoC-V1-CUBE-Semantyc-Layer
-
-# Add your OpenAI API key to .env file
-echo 'OPENAI_API_KEY="your-api-key-here"' >> .env
+echo 'OPENAI_API_KEY="your-key"' >> .env
 ```
 
-2. **Build and start all services:**
+2. Start all services:
 ```bash
 docker-compose up --build -d
 ```
 
-3. **Wait for services to be ready (2-3 minutes):**
-```bash
-# Check all services are healthy
-docker-compose ps
+3. Wait 2-3 minutes for services to initialize, then access:
+- Chat interface: http://localhost:3000
+- Analyst tool: http://localhost:8501
 
-# All containers should show "healthy" status
+**Service health checks:**
+```bash
+docker-compose ps                    # Check all services
+curl http://localhost:3000/health    # Frontend
+curl http://localhost:8080/health    # Orchestrator
+curl http://localhost:4000/readyz    # CUBE
 ```
 
-4. **Access the chat application:**
+**View logs:**
 ```bash
-# Open your browser to:
-http://localhost:3000
-```
-
-## Available Measures and Dimensions
-
-The system provides access to event management data through the **Event Performance Overview** view:
-
-### Measures (Metrics you can query)
-- **Order Count**: Total number of orders
-- **Total Order Value**: Sum of all order values (total revenue)
-- **Average Order Value**: Mean order revenue
-- **Total Tickets Sold**: Total number of tickets sold
-- **Average Tickets per Order**: Average number of tickets per order
-
-### Dimensions (Ways to filter and group data)
-- **Order Information**: Order ID, Order Date, Visitor Email
-- **Event Information**: Event ID, Event Name, Event Start Date, Event Status, Event Category
-- **Business Information**: Company ID, Shop ID, Ticket ID, Payment Method, Currency
-
-## Example Questions to Ask
-
-Try these natural language queries in the chat interface:
-
-### Revenue Analytics
-- "Show me the total revenue for each event"
-- "What's the average order value by payment method?"
-- "Which events generated the most revenue?"
-- "Show monthly revenue trends"
-
-### Event Performance
-- "Which events sold the most tickets?"
-- "What's the average number of tickets sold per order?"
-- "Show me events with the highest average order value"
-- "Which event categories perform best?"
-
-### Customer Insights
-- "How many orders were placed last month?"
-- "What are the most popular payment methods?"
-- "Show me orders by currency"
-- "Which shop locations have the highest sales?"
-
-### Time-based Analysis
-- "Show me revenue by month"
-- "What's the trend in ticket sales over time?"
-- "Compare this month's performance to last month"
-- "Show me orders placed in the last 7 days"
-
-## Service Health Checks
-
-```bash
-# Check individual services
-curl http://localhost:3000/health        # Frontend
-curl http://localhost:8080/health        # Orchestrator
-curl http://localhost:4000/readyz        # CUBE Core
-curl http://localhost:3306               # MySQL (connection test)
-
-# View logs
 docker-compose logs chat-frontend
 docker-compose logs orchestrator
 docker-compose logs cube
 docker-compose logs mysql
+docker-compose logs analyst-agent
 ```
 
-## Troubleshooting
-
-### If chat interface doesn't load:
+**Restart services:**
 ```bash
-docker-compose restart chat-frontend
+docker-compose restart <service-name>
+docker-compose down && docker-compose up --build -d  # Full rebuild
 ```
 
-### If queries fail:
-```bash
-# Check orchestrator logs
-docker-compose logs orchestrator
+## Data Model
 
-# Restart orchestrator
-docker-compose restart orchestrator
-```
+**Event Performance Overview** provides:
 
-### To rebuild everything:
-```bash
-docker-compose down
-docker-compose up --build -d
-```
+**Measures:**
+- Order Count
+- Total Order Value (revenue)
+- Average Order Value
+- Total Tickets Sold
+- Average Tickets per Order
 
-## Development
+**Dimensions:**
+- Order: ID, Date, Visitor Email
+- Event: ID, Name, Start Date, Status, Category
+- Business: Company ID, Shop ID, Ticket ID, Payment Method, Currency
 
-The system is fully containerized for easy development and deployment. Each service can be developed independently:
+## Example Queries
 
-- **Frontend**: React application with styled components
-- **Orchestrator**: Python FastAPI service with OpenAI integration
-- **CUBE Core**: Node.js semantic layer with YAML model definitions
-- **MySQL**: Database with CSV data loading capabilities
-
-For detailed development information, see the CLAUDE.md file.
+- "Show total revenue by event"
+- "Which events sold the most tickets?"
+- "Monthly revenue trends"
+- "Orders placed last 7 days"
+- "Average order value by payment method"
+- "Top performing event categories"
