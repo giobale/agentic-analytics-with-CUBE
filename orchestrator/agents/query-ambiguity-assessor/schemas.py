@@ -174,7 +174,7 @@ class ReceiveClarificationOutput(BaseModel):
 
 class QueryConfirmationOutput(BaseModel):
     """Output from query confirmation state"""
-    state: AgentState = Field(description="Next state (always QUERY_CONFIRMATION)")
+    state: AgentState = Field(description="Next state (QUERY_CONFIRMATION for confirmation request)")
     confirmation_message: str = Field(description="Natural language summary of interpreted query")
     interpreted_parameters: Dict[str, Any] = Field(description="Interpreted query parameters")
     confirmation_required: bool = Field(default=True, description="Whether user confirmation is needed")

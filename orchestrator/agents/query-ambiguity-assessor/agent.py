@@ -74,14 +74,61 @@ class QueryAmbiguityAssessor:
         # Create base system prompt
         self.base_system_prompt = PromptTemplates.get_base_system_prompt()
 
-        # Initialize the PydanticAI agent with dependencies
-        self.agent = Agent(
+        # Create separate agents for each output type (PydanticAI 1.3.0+ requirement)
+        # Configure retry settings for better handling of validation errors
+        from pydantic_ai import ModelSettings
+
+        model_settings = ModelSettings(max_retries=3)
+
+        self.assessment_agent = Agent(
             model=self.model_name,
             deps_type=AgentDependencies,
-            system_prompt=self.base_system_prompt
+            system_prompt=self.base_system_prompt,
+            output_type=QueryAssessmentOutput,
+            model_settings=model_settings
         )
 
-        # Register tools with the agent
+        self.clarification_agent = Agent(
+            model=self.model_name,
+            deps_type=AgentDependencies,
+            system_prompt=self.base_system_prompt,
+            output_type=ClarificationRequestOutput,
+            model_settings=model_settings
+        )
+
+        self.receive_clarification_agent = Agent(
+            model=self.model_name,
+            deps_type=AgentDependencies,
+            system_prompt=self.base_system_prompt,
+            output_type=ReceiveClarificationOutput,
+            model_settings=model_settings
+        )
+
+        self.confirmation_agent = Agent(
+            model=self.model_name,
+            deps_type=AgentDependencies,
+            system_prompt=self.base_system_prompt,
+            output_type=QueryConfirmationOutput,
+            model_settings=model_settings
+        )
+
+        self.rejection_agent = Agent(
+            model=self.model_name,
+            deps_type=AgentDependencies,
+            system_prompt=self.base_system_prompt,
+            output_type=QueryRejectionOutput,
+            model_settings=model_settings
+        )
+
+        self.api_construction_agent = Agent(
+            model=self.model_name,
+            deps_type=AgentDependencies,
+            system_prompt=self.base_system_prompt,
+            output_type=APICallConstructionOutput,
+            model_settings=model_settings
+        )
+
+        # Register tools with all agents
         self._register_tools()
 
         # Current state tracking
@@ -90,61 +137,78 @@ class QueryAmbiguityAssessor:
         logger.info(f"QueryAmbiguityAssessor initialized with model: {self.model_name}")
 
     def _register_tools(self) -> None:
-        """Register tools with the PydanticAI agent"""
+        """Register tools with all PydanticAI agents"""
 
-        # Metadata tools
-        @self.agent.tool
-        def tool_get_available_measures(ctx: RunContext[AgentDependencies]) -> Dict[str, Any]:
-            """Get list of available measures from the cube metadata."""
-            return get_available_measures(ctx.deps)
+        # Register tools on all agent instances
+        agents = [
+            self.assessment_agent,
+            self.clarification_agent,
+            self.receive_clarification_agent,
+            self.confirmation_agent,
+            self.rejection_agent,
+            self.api_construction_agent
+        ]
 
-        @self.agent.tool
-        def tool_get_available_dimensions(ctx: RunContext[AgentDependencies]) -> Dict[str, Any]:
-            """Get list of available dimensions from the cube metadata."""
-            return get_available_dimensions(ctx.deps)
+        for agent in agents:
+            # Metadata tools
+            @agent.tool
+            def tool_get_available_measures(ctx: RunContext[AgentDependencies]) -> Dict[str, Any]:
+                """Get list of available measures from the cube metadata."""
+                return get_available_measures(ctx.deps)
 
-        @self.agent.tool
-        def tool_get_time_dimensions(ctx: RunContext[AgentDependencies]) -> Dict[str, Any]:
-            """Get list of time dimensions from the cube metadata."""
-            return get_time_dimensions(ctx.deps)
+            @agent.tool
+            def tool_get_available_dimensions(ctx: RunContext[AgentDependencies]) -> Dict[str, Any]:
+                """Get list of available dimensions from the cube metadata."""
+                return get_available_dimensions(ctx.deps)
 
-        @self.agent.tool
-        def tool_validate_measure(
-            ctx: RunContext[AgentDependencies],
-            measure_name: str
-        ) -> Dict[str, Any]:
-            """Validate that a measure exists in the cube metadata."""
-            return validate_measure_exists(ctx.deps, measure_name)
+            @agent.tool
+            def tool_get_time_dimensions(ctx: RunContext[AgentDependencies]) -> Dict[str, Any]:
+                """Get list of time dimensions from the cube metadata."""
+                return get_time_dimensions(ctx.deps)
 
-        @self.agent.tool
-        def tool_validate_dimension(
-            ctx: RunContext[AgentDependencies],
-            dimension_name: str
-        ) -> Dict[str, Any]:
-            """Validate that a dimension exists in the cube metadata."""
-            return validate_dimension_exists(ctx.deps, dimension_name)
+            @agent.tool
+            def tool_validate_measure(
+                ctx: RunContext[AgentDependencies],
+                measure_name: str
+            ) -> Dict[str, Any]:
+                """Validate that a measure exists in the cube metadata."""
+                return validate_measure_exists(ctx.deps, measure_name)
 
-        # Context management tools
-        @self.agent.tool
-        def tool_update_context(
-            ctx: RunContext[AgentDependencies],
-            key: str,
-            value: Any
-        ) -> Dict[str, Any]:
-            """Update the query context with new information from clarifications."""
-            return update_query_context(ctx.deps, key, value)
+            @agent.tool
+            def tool_validate_dimension(
+                ctx: RunContext[AgentDependencies],
+                dimension_name: str
+            ) -> Dict[str, Any]:
+                """Validate that a dimension exists in the cube metadata."""
+                return validate_dimension_exists(ctx.deps, dimension_name)
 
-        @self.agent.tool
-        def tool_get_context(ctx: RunContext[AgentDependencies]) -> Dict[str, Any]:
-            """Get the current query context."""
-            return get_query_context(ctx.deps)
+            # Context management tools
+            @agent.tool
+            def tool_update_context(
+                ctx: RunContext[AgentDependencies],
+                key: str,
+                value: str
+            ) -> Dict[str, Any]:
+                """Update the query context with new information from clarifications.
 
-        @self.agent.tool
-        def tool_clear_context(ctx: RunContext[AgentDependencies]) -> Dict[str, Any]:
-            """Clear the query context (used when query is rejected)."""
-            return clear_query_context(ctx.deps)
+                Args:
+                    ctx: Agent run context
+                    key: Context key to update
+                    value: String value to store (use JSON string for complex values)
+                """
+                return update_query_context(ctx.deps, key, value)
 
-        logger.debug("Tools registered with agent")
+            @agent.tool
+            def tool_get_context(ctx: RunContext[AgentDependencies]) -> Dict[str, Any]:
+                """Get the current query context."""
+                return get_query_context(ctx.deps)
+
+            @agent.tool
+            def tool_clear_context(ctx: RunContext[AgentDependencies]) -> Dict[str, Any]:
+                """Clear the query context (used when query is rejected)."""
+                return clear_query_context(ctx.deps)
+
+        logger.debug("Tools registered with all agents")
 
     async def assess_query(
         self,
@@ -188,13 +252,12 @@ class QueryAmbiguityAssessor:
             )
 
             # Run agent with structured output
-            result = await self.agent.run(
+            result = await self.assessment_agent.run(
                 state_prompt,
-                deps=deps,
-                result_type=QueryAssessmentOutput
+                deps=deps
             )
 
-            assessment = result.data
+            assessment = result.output
 
             # Update conversation with agent response
             conversation_context.add_message(
@@ -277,13 +340,12 @@ class QueryAmbiguityAssessor:
             )
 
             # Run agent
-            result = await self.agent.run(
+            result = await self.clarification_agent.run(
                 state_prompt,
-                deps=deps,
-                result_type=ClarificationRequestOutput
+                deps=deps
             )
 
-            clarification = result.data
+            clarification = result.output
 
             # Update conversation
             conversation_context.add_message(
@@ -353,13 +415,12 @@ class QueryAmbiguityAssessor:
             )
 
             # Run agent
-            result = await self.agent.run(
+            result = await self.receive_clarification_agent.run(
                 state_prompt,
-                deps=deps,
-                result_type=ReceiveClarificationOutput
+                deps=deps
             )
 
-            clarification_result = result.data
+            clarification_result = result.output
 
             # Update conversation context with extracted info
             for key, value in clarification_result.extracted_info.items():
@@ -438,13 +499,12 @@ class QueryAmbiguityAssessor:
             )
 
             # Run agent
-            result = await self.agent.run(
+            result = await self.confirmation_agent.run(
                 state_prompt,
-                deps=deps,
-                result_type=QueryConfirmationOutput
+                deps=deps
             )
 
-            confirmation = result.data
+            confirmation = result.output
 
             # Add to conversation
             conversation_context.add_message(
@@ -505,13 +565,12 @@ class QueryAmbiguityAssessor:
             )
 
             # Run agent
-            result = await self.agent.run(
+            result = await self.rejection_agent.run(
                 state_prompt,
-                deps=deps,
-                result_type=QueryRejectionOutput
+                deps=deps
             )
 
-            rejection = result.data
+            rejection = result.output
 
             # Add to conversation
             conversation_context.add_message(
@@ -573,13 +632,12 @@ class QueryAmbiguityAssessor:
             )
 
             # Run agent
-            result = await self.agent.run(
+            result = await self.api_construction_agent.run(
                 state_prompt,
-                deps=deps,
-                result_type=APICallConstructionOutput
+                deps=deps
             )
 
-            api_call = result.data
+            api_call = result.output
 
             # Add to conversation
             conversation_context.add_message(

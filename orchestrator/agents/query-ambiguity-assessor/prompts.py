@@ -17,19 +17,28 @@ class PromptTemplates:
         return """You are a Query Ambiguity Assessor agent. Your role is to help users formulate clear,
 unambiguous queries for a data analytics system built on Cube.js.
 
+CRITICAL: Be MINIMAL with clarifications. Only ask when truly necessary.
+
 Your primary responsibilities:
-1. Assess whether user queries are clear enough to execute
-2. Identify specific ambiguities in time specifications, grouping, filters, measures, and dimensions
-3. Ask targeted clarifying questions (ONE at a time) when ambiguities are found
+1. Parse user queries to extract measures, dimensions, time references, and filters
+2. Make intelligent ASSUMPTIONS when information is not explicitly provided:
+   - If NO time range mentioned → Assume ALL TIME (no time dimension needed)
+   - If NO dimensions mentioned → Assume NO GROUPING (aggregate all data)
+   - If NO filters mentioned → Assume NO FILTERING (include all data)
+   - ONLY measures are REQUIRED. Everything else is optional.
+3. Ask clarifying questions ONLY for:
+   - Ambiguous time references (e.g., "January" without context)
+   - Invalid/non-existent dimensions or filter values
+   - Missing required measures
 4. Confirm your interpretation with the user before constructing API calls
-5. Build accurate Cube.js query parameters only after receiving user confirmation
 
 Key principles:
+- **ASSUME rather than ASK** - Only clarify true ambiguities
 - Be conversational and helpful, not robotic
-- Focus on ONE ambiguity at a time to avoid overwhelming the user
-- Provide contextual examples and suggestions when asking for clarification
+- Focus on ONE ambiguity at a time when clarification is needed
+- Provide contextual examples and suggestions based on cube metadata
+- Use fuzzy matching to find similar values when user input doesn't exactly match
 - Always confirm your interpretation before proceeding to API call construction
-- Use the available cube metadata to validate that requested measures and dimensions exist
 
 You operate in a state-based workflow. Follow the state transitions carefully and provide
 outputs in the exact format specified for each state."""
@@ -59,7 +68,7 @@ outputs in the exact format specified for each state."""
 
         return f"""STATE: QUERY_ASSESSMENT
 
-Analyze this user query for ambiguities:
+Analyze this user query using MINIMAL clarification approach:
 "{user_query}"
 
 Available Cube view: {cube_metadata.view_name}
@@ -70,22 +79,78 @@ Available Measures:
 Available Dimensions:
 {dimensions_list}{context_info}
 
-Your task:
-1. Determine if the query is clear enough to execute
-2. Check for these potential ambiguities:
-   - Time specification (is the time period clear?)
-   - Grouping granularity (daily/weekly/monthly/yearly/by event/by ticket?)
-   - Filter criteria (are all necessary filters specified?)
-   - Measures (is it clear which metrics the user wants?)
-   - Dimensions (is it clear how to group or filter the data?)
+CRITICAL: Use your language understanding to SEMANTICALLY MATCH user requests to available measures and dimensions.
+DO NOT require exact string matches. For example:
+- "total revenue" should match "revenue" measure
+- "show me sales" should match "tickets_sold" or "total_order_value" measure
+- "by venue" should match "venue_name" dimension
 
-3. Set ambiguity flags appropriately
-4. Decide next state:
-   - If ANY ambiguity exists → CLARIFICATION_REQUEST
-   - If NO ambiguities AND no previous clarifications → QUERY_CONFIRMATION
-   - If NO ambiguities AND previous clarifications exist → QUERY_CONFIRMATION
+Only flag as ambiguous if there is NO reasonable semantic match or if multiple matches are equally valid.
 
-Respond with a QueryAssessmentOutput object."""
+Your task - Parse the query for:
+
+1. **MEASURES** (REQUIRED - ask if missing or unclear):
+   - Extract what metrics/calculations the user wants
+   - Use SEMANTIC MATCHING to find the appropriate measure from available list
+   - Examples of semantic matches:
+     * "total revenue" → matches "revenue" measure
+     * "ticket sales" → matches "tickets_sold" measure
+     * "average price" → matches "avg_order_value" measure
+   - ONLY set measure_ambiguous = TRUE if:
+     * No measure is mentioned in the query at all
+     * Multiple measures could match and it's unclear which one
+     * The requested measure has NO semantic match to any available measure
+   - DO NOT flag as ambiguous if there's a clear semantic match (even if not exact string match)
+
+2. **TIME RANGE** (OPTIONAL - assume ALL TIME if not mentioned):
+   - IF NO time reference mentioned:
+     → time_specification_unclear = FALSE
+     → Assume all time (no time dimension needed)
+     → SKIP clarification
+
+   - IF time reference IS mentioned:
+     → Check if it's ambiguous (e.g., "January", "Monday" without context)
+     → If "last month", "this year", "last 7 days" = CLEAR (no clarification)
+     → If "January" or "Monday" alone = AMBIGUOUS (ask: specific period or compare all?)
+     → Set time_specification_unclear accordingly
+
+3. **DIMENSIONS** (OPTIONAL - assume NO GROUPING if not mentioned):
+   - IF NO dimensions mentioned:
+     → dimension_ambiguous = FALSE
+     → Assume no grouping needed
+     → SKIP clarification
+
+   - IF dimensions ARE mentioned:
+     → Use SEMANTIC MATCHING to find appropriate dimensions from available list
+     → Examples of semantic matches:
+       * "by venue" → matches "venue_name" dimension
+       * "by event" → matches "event_name" dimension
+       * "by genre" → matches "genre" dimension (if exists)
+     → ONLY set dimension_ambiguous = TRUE if:
+       * The requested dimension has NO semantic match to any available dimension
+       * Multiple dimensions could match and it's unclear which one
+     → DO NOT flag as ambiguous if there's a clear semantic match
+
+4. **FILTERS** (OPTIONAL - assume NO FILTERING if not mentioned):
+   - IF NO filters mentioned:
+     → filter_criteria_unclear = FALSE
+     → Assume no filtering needed
+     → SKIP clarification
+
+   - IF filters ARE mentioned:
+     → Validate filter dimension exists
+     → Validate filter values (use fuzzy matching)
+     → Only set filter_criteria_unclear = TRUE if invalid filter found
+
+5. **DECISION**:
+   - Set ambiguity flags ONLY for TRUE ambiguities or invalid values
+   - Next state:
+     → If ANY ambiguity flag is TRUE → CLARIFICATION_REQUEST
+     → If NO ambiguity flags set → QUERY_CONFIRMATION
+
+Respond with a QueryAssessmentOutput object.
+
+REMEMBER: Only measures are required. Time, dimensions, and filters are ALL OPTIONAL."""
 
     @staticmethod
     def get_clarification_request_prompt(
@@ -99,31 +164,61 @@ Respond with a QueryAssessmentOutput object."""
         # Pick the first ambiguous aspect to clarify
         aspect_to_clarify = ambiguous_aspects[0] if ambiguous_aspects else "general"
 
-        guidance = {
-            "time_specification": "Ask about the time period or date range they want to analyze.",
-            "grouping_granularity": "Ask about the level of granularity (daily, weekly, monthly, by event, etc.).",
-            "filter_criteria": "Ask about specific filters they want to apply.",
-            "measure": "Ask which specific metric or measure they want to see.",
-            "dimension": "Ask which dimensions they want to group by or filter on."
+        # Priority order for clarification
+        priority_guidance = {
+            "measure": {
+                "order": 1,
+                "guidance": "The requested measure doesn't exist. Suggest similar measures from the available list using fuzzy matching."
+            },
+            "dimension": {
+                "order": 2,
+                "guidance": "The requested dimension doesn't exist. Suggest similar dimensions from the available list using fuzzy matching."
+            },
+            "filter_criteria": {
+                "order": 2,
+                "guidance": "The requested filter value doesn't exist or the filter dimension is invalid. Suggest similar values or dimensions."
+            },
+            "time_specification": {
+                "order": 3,
+                "guidance": """The time reference is ambiguous. Examples:
+- "January" alone → Ask: "Do you want data for only last January, or compare across all Januaries?"
+- "Monday" alone → Ask: "Do you want data for only last Monday, or compare all Mondays?"
+Provide two options: specific period vs. comparison across all periods."""
+            },
+            "grouping_granularity": {
+                "order": 4,
+                "guidance": "Only ask if the grouping level is truly unclear after parsing the query."
+            }
         }
 
-        current_guidance = guidance.get(aspect_to_clarify, "Ask for the needed clarification.")
+        aspect_info = priority_guidance.get(aspect_to_clarify, {"order": 5, "guidance": "Ask for the needed clarification."})
+        current_guidance = aspect_info["guidance"]
+
+        # Get available items for suggestions
+        measures_list = ", ".join([m.get('title', m.get('name', '')) for m in cube_metadata.measures[:5]])
+        dimensions_list = ", ".join([d.get('title', d.get('name', '')) for d in cube_metadata.dimensions[:5]])
 
         return f"""STATE: CLARIFICATION_REQUEST
 
 User query: "{user_query}"
 Ambiguous aspect to clarify: {aspect_to_clarify}
+Priority order: {aspect_info["order"]} (1=highest, 5=lowest)
 
 Guidance: {current_guidance}
 
 Query context so far: {query_context}
 
-Available cube metadata: {cube_metadata.view_name}
+Available measures (sample): {measures_list}
+Available dimensions (sample): {dimensions_list}
 
 Your task:
 1. Formulate a friendly, conversational clarification question focusing ONLY on: {aspect_to_clarify}
-2. Provide 2-4 specific suggestions or examples based on the available dimensions and measures
+2. Provide 2-3 specific, actionable suggestions based on:
+   - Available cube metadata (use the tools to get similar values)
+   - Fuzzy matching if user input was close to a valid value
+   - Context from the query
 3. Keep the question simple and focused on ONE thing
+4. Frame suggestions as concrete options the user can choose from
 
 Respond with a ClarificationRequestOutput object."""
 
@@ -161,25 +256,60 @@ Respond with a ReceiveClarificationOutput object."""
     ) -> str:
         """Generate prompt for query confirmation state"""
 
+        # Extract available metadata for reference
+        available_measures = [m.get('name', '') for m in cube_metadata.measures]
+        available_dimensions = [d.get('name', '') for d in cube_metadata.dimensions]
+        time_dimensions = [d.get('name', '') for d in cube_metadata.dimensions if d.get('type') == 'time']
+
         return f"""STATE: QUERY_CONFIRMATION
 
 Original query: "{original_query}"
-Accumulated context from clarifications: {query_context}
+Accumulated context: {query_context}
 
-Your task:
-1. Formulate a clear, natural language summary of what you understand the query to be
-2. Include the key parameters:
-   - What metrics/measures will be calculated
-   - How the data will be grouped (dimensions)
-   - What time period is covered
-   - Any filters that will be applied
-3. Present this to the user for confirmation
+Available metadata:
+- Measures: {available_measures}
+- Dimensions: {available_dimensions}
+- Time dimensions: {time_dimensions}
 
-The user will respond with either "Confirm" or "Reject" via a button in the UI.
+CRITICAL OUTPUT REQUIREMENTS:
+You MUST return a QueryConfirmationOutput object with these REQUIRED fields:
 
-Respond with a QueryConfirmationOutput object including:
-- A natural language confirmation message
-- The interpreted parameters in a structured format"""
+1. state: MUST be "query_confirmation" (string, exact value)
+
+2. confirmation_message: A natural language summary in this format:
+   "I understand you want to see:
+    - Measure: [measure name and description]
+    - Grouped by: [dimension] OR "No grouping (total only)"
+    - Time period: [period] OR "All time"
+    - Filters: [any filters] OR "No filters"
+
+    Is this correct?"
+
+3. interpreted_parameters: REQUIRED dictionary with this EXACT structure:
+   {{
+     "measures": ["full.measure.name"],  // REQUIRED - use exact names from available measures
+     "dimensions": ["full.dimension.name"],  // Use [] if no non-time dimensions
+     "timeDimensions": [  // Use [] if no time grouping
+       {{
+         "dimension": "full.time.dimension.name",
+         "granularity": "year|month|week|day|null"
+       }}
+     ],
+     "filters": []  // Use [] if no filters
+   }}
+
+4. confirmation_required: true (boolean)
+
+PARSING RULES for interpreted_parameters:
+
+For "Show me total tickets sold by year":
+- measures: Identify the tickets sold measure from available measures
+- dimensions: [] (no non-time grouping)
+- timeDimensions: [{{ "dimension": "<time_dimension_name>", "granularity": "year" }}]
+- filters: []
+
+CRITICAL: The interpreted_parameters field is MANDATORY and must match the structure above exactly.
+DO NOT omit this field or the validation will fail."""
 
     @staticmethod
     def get_api_call_construction_prompt(
@@ -207,20 +337,29 @@ Available in Cube:
 Your task:
 Construct a valid Cube.js query with these components:
 
-1. measures: List of measure names (must match exactly from available measures)
-2. dimensions: List of dimension names for grouping (must match exactly from available dimensions)
+1. measures: List of measure names
+   - Map the user's requested metrics to the EXACT measure names from available list
+   - Example: if user said "total revenue", use the "revenue" measure name
+
+2. dimensions: List of dimension names for grouping
+   - Map the user's requested groupings to the EXACT dimension names from available list
+   - Example: if user said "by venue", use the "venue_name" dimension name
+
 3. timeDimensions: List of time dimension configs with:
-   - dimension: time dimension name
+   - dimension: time dimension name (exact name from available list)
    - granularity: "day", "week", "month", "year", or null
    - dateRange: "last week", "last month", "this year", etc. (if applicable)
+
 4. filters: List of filter objects (if applicable):
-   - member: dimension or measure name
+   - member: dimension or measure name (exact name from available list)
    - operator: "equals", "contains", "gt", "lt", etc.
    - values: array of filter values
+
 5. order: Ordering specification (if applicable)
 6. limit: Result limit (if applicable)
 
-IMPORTANT: Use ONLY the exact measure and dimension names from the available lists above.
+CRITICAL: The confirmed parameters may use user's language (e.g., "total revenue").
+You must translate these to the EXACT measure/dimension names from the available lists above.
 
 Respond with an APICallConstructionOutput object containing the complete CubeQueryParameters."""
 
