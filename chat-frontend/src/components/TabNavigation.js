@@ -54,7 +54,7 @@ const Tab = styled.button`
 const TabNavigation = ({ activeTab, onTabChange }) => {
   const tabs = [
     { id: 'chat', label: 'Chat' },
-    { id: 'saved-queries', label: 'Saved Queries' },
+    { id: 'saved-queries', label: 'Saved Datasets' },
     { id: 'metrics-catalog', label: 'Metrics Catalog' }
   ];
 

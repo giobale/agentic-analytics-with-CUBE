@@ -63,7 +63,8 @@ const ResultsContainer = styled.div`
   border-radius: ${borderRadius.lg};
   padding: ${spacing.xl};
   box-shadow: ${shadows.md};
-  max-width: 100%;
+  max-width: 85%;
+  width: 85%;
   border: 1px solid ${colors.gray200};
 `;
 
@@ -99,6 +100,7 @@ const DownloadButton = styled.button`
   display: flex;
   align-items: center;
   gap: ${spacing.sm};
+  margin-right: ${spacing.lg};
 
   &:hover:not(:disabled) {
     background: ${colors.success};
@@ -127,7 +129,7 @@ const GenerateReportButton = styled.button`
   display: flex;
   align-items: center;
   gap: ${spacing.sm};
-  margin-left: ${spacing.sm};
+  margin-left: ${spacing.lg};
 
   &:hover:not(:disabled) {
     background: ${colors.primaryDark};
@@ -155,7 +157,7 @@ const SaveQueryButton = styled.button`
   display: flex;
   align-items: center;
   gap: ${spacing.sm};
-  margin-left: ${spacing.sm};
+  margin-right: ${spacing.lg};
 
   &:hover:not(:disabled) {
     background: ${colors.primary};
@@ -614,7 +616,7 @@ const ChatMessage = ({ message, onSuggestionClick, onSaveQuery }) => {
         <ResultsContainer>
           <ResultsHeader>
             <ResultsTitle>
-              Query Results
+              Results
               {message.data.row_count && ` (${message.data.row_count} rows)`}
             </ResultsTitle>
             {message.data.csv_filename && (
@@ -624,10 +626,10 @@ const ChatMessage = ({ message, onSuggestionClick, onSaveQuery }) => {
                   disabled={isSaved}
                   className={isSaved ? 'saved' : ''}
                 >
-                  {isSaved ? '✓ Saved' : 'Save Query'}
+                  {isSaved ? '✓ Saved' : 'Save Dataset'}
                 </SaveQueryButton>
                 <DownloadButton onClick={handleDownloadCSV}>
-                  Download CSV
+                  Download
                 </DownloadButton>
                 <GenerateReportButton
                   onClick={handleGenerateReport}

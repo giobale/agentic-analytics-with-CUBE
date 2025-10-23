@@ -218,9 +218,9 @@ const SavedQueries = ({ savedQueries = [] }) => {
   return (
     <Container>
       <Header>
-        <Title>Saved Queries</Title>
+        <Title>Saved Datasets</Title>
         <Subtitle>
-          Your saved queries are ready to use anytime
+          Your saved datasets are ready to use anytime
         </Subtitle>
       </Header>
 
@@ -231,7 +231,7 @@ const SavedQueries = ({ savedQueries = [] }) => {
             placeholder="Search…"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            aria-label="Search saved queries"
+            aria-label="Search"
           />
         </SearchContainer>
       )}
@@ -241,7 +241,7 @@ const SavedQueries = ({ savedQueries = [] }) => {
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
             <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"></path>
           </svg>
-          <h3>No saved queries yet</h3>
+          <h3>No datasets saved yet</h3>
           <p>
             You haven't saved any queries yet. Save a query from the Chat tab.
           </p>
@@ -264,7 +264,7 @@ const SavedQueries = ({ savedQueries = [] }) => {
               <p>Try adjusting your search terms</p>
             </EmptyState>
           ) : (
-            <Grid role="list" aria-label="Saved queries">
+            <Grid role="list" aria-label="Saved datasets">
               {filteredQueries.map(query => (
                 <QueryCard key={query.id} role="listitem">
                   <QueryName>{query.name}</QueryName>
