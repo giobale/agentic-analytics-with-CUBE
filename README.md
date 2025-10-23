@@ -2,6 +2,8 @@
 
 Natural language querying system that translates user questions into CUBE API calls. Users ask questions in plain English, the system retrieves data from MySQL through CUBE's semantic layer, and provides results as structured data and CSV exports.
 
+This POC demonstrates the system using event management domain data (orders, tickets, events, venues). The dataset includes ticket sales, revenue, customer information, and event details, all generated using Mockaroo to simulate a realistic event ticketing platform.
+
 ## Architecture
 
 ```
